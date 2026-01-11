@@ -1,0 +1,41 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Clawd Gateway",
+        "description": "Configure connection to your Clawdbot Gateway",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "Gateway Token",
+          "use_ssl": "Use SSL (wss://)",
+          "timeout": "Agent Timeout (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Gateway",
+      "invalid_auth": "Authentication failed - invalid token",
+      "timeout": "Connection timeout",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "Gateway is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Clawd Gateway Options",
+        "description": "Update Gateway connection settings",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "Gateway Token",
+          "use_ssl": "Use SSL (wss://)",
+          "timeout": "Agent Timeout (seconds)"
+        }
+      }
+    }
+  }
+}
