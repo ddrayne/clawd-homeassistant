@@ -200,29 +200,42 @@ class ClawdGatewayClient:
             return
 
         # Log event details for debugging
+        data = payload.get("data", {})
         _LOGGER.debug(
             "Agent event for %s: status=%s, output=%s, summary=%s, data keys=%s",
             run_id,
             payload.get("status"),
             "yes" if payload.get("output") else "no",
             "yes" if payload.get("summary") else "no",
-            list(payload.get("data", {}).keys()) if "data" in payload else "none",
+            list(data.keys()) if data else "none",
         )
 
-        # Buffer output
+        # Buffer output from either 'output' field or 'data.text' field
         output = payload.get("output")
+        if not output and "text" in data:
+            output = data.get("text")
+
         if output:
             agent_run.add_output(output)
             _LOGGER.debug("Buffered output for %s: %d chars", run_id, len(output))
 
-        # Check for completion
+        # Check for completion - either via status field or phase field
         status = payload.get("status")
+        phase = data.get("phase")
+
         if status in ("ok", "error"):
+            # Old-style completion
             summary = payload.get("summary")
             agent_run.set_complete(status, summary)
             _LOGGER.info("Agent run %s completed with status: %s", run_id, status)
+        elif phase == "endedAt" or phase == "complete":
+            # New-style completion via phase
+            agent_run.set_complete("ok", None)
+            _LOGGER.info("Agent run %s completed (phase: %s)", run_id, phase)
         elif status:
             _LOGGER.debug("Agent run %s status: %s (not complete)", run_id, status)
+        elif phase:
+            _LOGGER.debug("Agent run %s phase: %s", run_id, phase)
 
     async def health(self) -> dict[str, Any]:
         """Get Gateway health status."""
