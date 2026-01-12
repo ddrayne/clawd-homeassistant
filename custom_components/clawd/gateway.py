@@ -139,6 +139,20 @@ class GatewayProtocol:
                         self._connected_event.clear()
                         raise
 
+                    except ConnectionClosedError as err:
+                        # Handle WebSocket close gracefully
+                        self._connected = False
+                        self._connected_event.clear()
+                        if err.rcvd and err.rcvd.code == 1012:
+                            # Service restart - this is normal, will reconnect
+                            _LOGGER.info("Gateway is restarting, will reconnect")
+                        else:
+                            _LOGGER.warning(
+                                "Connection closed: %s (code: %s)",
+                                err.rcvd.reason if err.rcvd else "unknown",
+                                err.rcvd.code if err.rcvd else "none",
+                            )
+
                     except Exception as err:  # pylint: disable=broad-except
                         _LOGGER.error(
                             "Unexpected error in connection: %s",
