@@ -230,6 +230,34 @@ The **Session Key** setting allows you to route Home Assistant conversations to 
 
 To use a custom session, simply enter the desired session key in the integration configuration.
 
+### Voice-Optimized Session Configuration
+
+For the best voice assistant experience, you can configure a dedicated Clawdbot session with a system prompt optimized for spoken responses. This keeps responses brief and TTS-friendly.
+
+**Step 1: Create a voice-optimized session in Clawdbot**
+
+In your Clawdbot configuration, create a new session with a system prompt like:
+
+```
+You are a voice assistant for a smart home. Keep your responses:
+- Brief and conversational (1-3 sentences when possible)
+- Natural for text-to-speech (avoid bullet points, formatting, code blocks)
+- Free of emojis and special characters
+- Direct and to the point
+
+When performing tasks (emails, calendar, etc.), confirm the action briefly rather than explaining in detail.
+```
+
+Refer to the [Clawdbot documentation](https://docs.clawd.bot/) for details on configuring custom sessions and system prompts.
+
+**Step 2: Use the session in Home Assistant**
+
+1. Go to **Settings** → **Devices & Services** → **Clawd** → **Configure**
+2. Set the **Session Key** to your voice-optimized session name (e.g., `voice-assistant`)
+3. Click **Submit**
+
+Now all voice commands through Home Assistant will use your voice-optimized configuration, while other Clawdbot interfaces (Telegram, Discord, etc.) continue using their own settings.
+
 ### Emoji Stripping
 
 The **Strip emojis from TTS speech** option controls whether emojis are removed from spoken responses:
