@@ -5,6 +5,7 @@ import logging
 from homeassistant.components import conversation
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import intent
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
@@ -77,12 +78,15 @@ class ClawdConversationEntity(conversation.ConversationEntity):
             )
 
             # Add assistant response to chat log
-            chat_log.async_add_message(
-                conversation.AssistantContent(response=response_text)
+            chat_log.async_add_assistant_content_without_tools(
+                conversation.AssistantContent(
+                    agent_id=user_input.agent_id,
+                    content=response_text,
+                )
             )
 
             # Create intent response
-            intent_response = conversation.IntentResponse()
+            intent_response = intent.IntentResponse(language=user_input.language)
             intent_response.async_set_speech(response_text)
 
             return conversation.ConversationResult(
@@ -93,38 +97,38 @@ class ClawdConversationEntity(conversation.ConversationEntity):
         except GatewayConnectionError as err:
             _LOGGER.error("Gateway connection error: %s", err)
             return self._create_error_result(
+                user_input,
                 "I'm having trouble connecting to the Gateway. Please check your configuration.",
-                user_input.conversation_id,
             )
 
         except GatewayTimeoutError as err:
             _LOGGER.warning("Gateway timeout: %s", err)
             return self._create_error_result(
+                user_input,
                 "The response took too long. Please try again.",
-                user_input.conversation_id,
             )
 
         except AgentExecutionError as err:
             _LOGGER.error("Agent execution error: %s", err)
             return self._create_error_result(
+                user_input,
                 "I encountered an error while processing your request. Please try again.",
-                user_input.conversation_id,
             )
 
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected error in message handling")
             return self._create_error_result(
+                user_input,
                 "An unexpected error occurred. Please try again.",
-                user_input.conversation_id,
             )
 
     def _create_error_result(
-        self, message: str, conversation_id: str | None
+        self, user_input: conversation.ConversationInput, message: str
     ) -> conversation.ConversationResult:
         """Create an error result."""
-        intent_response = conversation.IntentResponse()
+        intent_response = intent.IntentResponse(language=user_input.language)
         intent_response.async_set_speech(message)
         return conversation.ConversationResult(
             response=intent_response,
-            conversation_id=conversation_id,
+            conversation_id=user_input.conversation_id,
         )
