@@ -1,15 +1,23 @@
 # Clawd Voice Assistant for Home Assistant
 
+<p align="center">
+  <img src="custom_components/clawd/icon.png" alt="Clawd Icon" width="128" height="128">
+</p>
+
 Integrate [Clawdbot](https://docs.clawd.bot/) with Home Assistant's voice control system, enabling your voice assistant to be powered by Claude through Clawd.
+
+Use Claude as your conversation agent in Home Assistant, bringing natural language understanding and intelligent responses to your smart home voice commands and Assist interface.
 
 ## Features
 
-- Direct integration with Clawdbot Gateway via WebSocket
-- Universal language support
-- Token-based authentication
-- Automatic reconnection
-- Configurable timeouts
-- SSL/TLS support
+- **Direct WebSocket Integration**: Real-time connection to Clawdbot Gateway
+- **Universal Language Support**: Works with any language Claude supports
+- **Smart TTS Processing**: Configurable emoji stripping for clean text-to-speech output
+- **Flexible Authentication**: Token-based auth with SSL/TLS support
+- **Reliable Connection**: Automatic reconnection with graceful error handling
+- **Customizable Sessions**: Route conversations to different Clawdbot sessions
+- **Fast Responses**: Typical response time of 5-10 seconds for most queries
+- **Easy Configuration**: Simple UI-based setup through Home Assistant
 
 ## Requirements
 
@@ -49,8 +57,9 @@ Integrate [Clawdbot](https://docs.clawd.bot/) with Home Assistant's voice contro
    - **Port**: Gateway port (default: `18789`)
    - **Gateway Token**: Your authentication token (leave empty for localhost without authentication)
    - **Use SSL**: Check this for `wss://` connections (recommended for remote connections)
-   - **Agent Timeout**: Maximum time to wait for agent response in seconds (default: 30, recommended: 120)
+   - **Agent Timeout**: Maximum time to wait for agent response in seconds (default: 30)
    - **Session Key**: Clawdbot session to use (default: `main` - the standard direct-chat session)
+   - **Strip emojis from TTS speech**: Remove emojis from spoken responses (default: enabled)
 
 5. Click **Submit**
 
@@ -65,9 +74,36 @@ Integrate [Clawdbot](https://docs.clawd.bot/) with Home Assistant's voice contro
 
 Once configured, your Home Assistant voice assistant will use Clawd to process conversations:
 
-- Use voice commands via the Home Assistant mobile app
-- Interact through the Assist interface in Home Assistant
-- All requests are sent to your Clawdbot Gateway's agent endpoint
+- **Voice Commands**: Use any Home Assistant voice interface (mobile app, voice satellites, etc.)
+- **Assist Interface**: Type or speak to Claude through the Home Assistant UI
+- **Natural Conversations**: Ask questions, get explanations, have multi-turn conversations
+- **All Requests**: Sent securely to your Clawdbot Gateway's agent endpoint
+
+### Example Interactions
+
+Claude can handle a wide variety of requests beyond typical voice assistant commands:
+
+**Information & Explanations:**
+- "What's the weather like today?"
+- "Explain how solar panels work"
+- "Who sent me a telegram message?"
+
+**Conversational:**
+- "Who are you?"
+- "Tell me a joke"
+- "What can you help me with?"
+
+**Math & Calculations:**
+- "What's 2 plus 2?"
+- "Convert 100 fahrenheit to celsius"
+- "Calculate the area of a circle with radius 5"
+
+**General Knowledge:**
+- "What year did the first moon landing happen?"
+- "Explain photosynthesis"
+- "What's the capital of Japan?"
+
+**Note**: Claude responds with natural, conversational language. For home automation commands, you may want to use Home Assistant's built-in intents alongside Claude for the best experience.
 
 ## Remote Gateway Setup
 
@@ -111,16 +147,19 @@ Then configure the integration:
 - For localhost connections without a token, leave the token field empty
 
 **Response timeout:**
-- Agent execution is taking longer than the configured timeout
-- Increase the timeout setting in integration options
+- Agent execution is taking longer than the configured timeout (default: 30 seconds)
+- Typical response time is 5-10 seconds for most queries
+- Complex questions may take longer (up to 30+ seconds)
+- Increase the timeout setting in integration options if needed
 - Check Gateway logs for issues
 
 ### Performance Issues
 
 **Slow responses:**
-- Agent execution can take 10-30+ seconds depending on complexity
+- Most queries respond in 5-10 seconds
+- Complex reasoning or long responses may take 15-30+ seconds
 - This is normal for AI agent processing
-- Consider increasing the timeout if needed
+- Consider increasing the timeout for complex queries
 
 **Connection drops:**
 - Check network stability
@@ -129,9 +168,10 @@ Then configure the integration:
 
 ## Limitations
 
-- **Response time**: AI agent processing can take 10-30+ seconds, which is longer than typical voice assistants
-- **Streaming**: Responses are buffered and returned complete (no streaming support)
-- **Context**: Conversation history is managed by Home Assistant's ChatLog
+- **Response time**: Typical queries take 5-10 seconds. While faster than early AI assistants, this is still slower than traditional rule-based voice assistants (1-2 seconds)
+- **Streaming**: Responses are buffered and returned complete (no streaming TTS support during generation)
+- **Home Automation**: Best used alongside Home Assistant's native intents for device control. Claude excels at information, conversation, and complex queries rather than simple "turn on the lights" commands
+- **Context**: Conversation history is managed by Home Assistant's ChatLog (persists across queries within a conversation)
 
 ## Security
 
@@ -164,6 +204,23 @@ The **Session Key** setting allows you to route Home Assistant conversations to 
   - Organize conversations by purpose (e.g., `home-assistant`, `automation`, etc.)
 
 To use a custom session, simply enter the desired session key in the integration configuration.
+
+### Emoji Stripping
+
+The **Strip emojis from TTS speech** option controls whether emojis are removed from spoken responses:
+
+- **Enabled (default)**: Emojis are removed from text-to-speech output for cleaner speech
+  - Example: "I'm Claude 🦞" → Speaks "I'm Claude"
+  - Emojis remain visible in the conversation history
+- **Disabled**: TTS attempts to read emojis (may sound awkward depending on your TTS engine)
+  - Example: "I'm Claude 🦞" → Speaks "I'm Claude lobster emoji"
+
+**When to disable:**
+- You have a high-quality TTS engine that handles emojis well
+- You prefer emoji descriptions to be spoken
+- You're using the integration primarily through text (Assist interface) rather than voice
+
+You can change this setting anytime in **Settings** → **Devices & Services** → **Clawd** → **Configure**.
 
 ### Multiple Gateways
 
