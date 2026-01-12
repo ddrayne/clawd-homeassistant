@@ -125,7 +125,7 @@ class ClawdConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
-        return ClawdOptionsFlowHandler(config_entry)
+        return ClawdOptionsFlowHandler()
 
 
 class ClawdOptionsFlowHandler(config_entries.OptionsFlow):
