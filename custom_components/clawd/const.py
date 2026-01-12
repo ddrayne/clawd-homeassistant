@@ -8,6 +8,7 @@ DEFAULT_PORT = 18789
 DEFAULT_USE_SSL = False
 DEFAULT_TIMEOUT = 30  # seconds
 DEFAULT_SESSION_KEY = "main"  # Default direct-chat session
+DEFAULT_STRIP_EMOJIS = True  # Strip emojis from TTS by default
 
 # Configuration keys
 CONF_HOST = "host"
@@ -16,6 +17,7 @@ CONF_TOKEN = "token"
 CONF_USE_SSL = "use_ssl"
 CONF_TIMEOUT = "timeout"
 CONF_SESSION_KEY = "session_key"
+CONF_STRIP_EMOJIS = "strip_emojis"
 
 # Connection states
 STATE_CONNECTED = "connected"

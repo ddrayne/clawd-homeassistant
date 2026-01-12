@@ -12,10 +12,12 @@ from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
     CONF_SESSION_KEY,
+    CONF_STRIP_EMOJIS,
     CONF_USE_SSL,
     DEFAULT_HOST,
     DEFAULT_PORT,
     DEFAULT_SESSION_KEY,
+    DEFAULT_STRIP_EMOJIS,
     DEFAULT_TIMEOUT,
     DEFAULT_USE_SSL,
     DOMAIN,
@@ -118,6 +120,9 @@ class ClawdConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(
                     CONF_SESSION_KEY, default=DEFAULT_SESSION_KEY
                 ): str,
+                vol.Optional(
+                    CONF_STRIP_EMOJIS, default=DEFAULT_STRIP_EMOJIS
+                ): bool,
             }
         )
 
@@ -196,6 +201,10 @@ class ClawdOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_SESSION_KEY,
                     default=current.get(CONF_SESSION_KEY, DEFAULT_SESSION_KEY),
                 ): str,
+                vol.Optional(
+                    CONF_STRIP_EMOJIS,
+                    default=current.get(CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS),
+                ): bool,
             }
         )
 

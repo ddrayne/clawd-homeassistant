@@ -10,7 +10,8 @@
           "token": "Gateway Token",
           "use_ssl": "Use SSL (wss://)",
           "timeout": "Agent Timeout (seconds)",
-          "session_key": "Session Key (default: main)"
+          "session_key": "Session Key (default: main)",
+          "strip_emojis": "Strip emojis from TTS speech"
         }
       }
     },
@@ -35,7 +36,8 @@
           "token": "Gateway Token",
           "use_ssl": "Use SSL (wss://)",
           "timeout": "Agent Timeout (seconds)",
-          "session_key": "Session Key (default: main)"
+          "session_key": "Session Key (default: main)",
+          "strip_emojis": "Strip emojis from TTS speech"
         }
       }
     }

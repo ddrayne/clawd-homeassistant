@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS, DOMAIN
 from .exceptions import (
     AgentExecutionError,
     GatewayConnectionError,
@@ -104,9 +104,12 @@ class ClawdConversationEntity(conversation.ConversationEntity):
                 )
             )
 
-            # Create intent response with emoji-free text for TTS
+            # Create intent response, optionally strip emojis for TTS
             intent_response = intent.IntentResponse(language=user_input.language)
-            speech_text = strip_emojis(response_text)
+            should_strip = self._config_entry.data.get(
+                CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS
+            )
+            speech_text = strip_emojis(response_text) if should_strip else response_text
             intent_response.async_set_speech(speech_text)
 
             return conversation.ConversationResult(
