@@ -10,8 +10,9 @@ import websockets
 from websockets.client import WebSocketClientProtocol
 
 from .const import (
+    CLIENT_DISPLAY_NAME,
+    CLIENT_ID,
     CLIENT_MODE,
-    CLIENT_NAME,
     CLIENT_PLATFORM,
     CLIENT_VERSION,
     PROTOCOL_MAX_VERSION,
@@ -182,14 +183,15 @@ class GatewayProtocol:
             "minProtocol": PROTOCOL_MIN_VERSION,
             "maxProtocol": PROTOCOL_MAX_VERSION,
             "client": {
-                "name": CLIENT_NAME,
+                "id": CLIENT_ID,
+                "displayName": CLIENT_DISPLAY_NAME,
                 "version": CLIENT_VERSION,
                 "platform": CLIENT_PLATFORM,
                 "mode": CLIENT_MODE,
             },
             "caps": [],  # No special capabilities
             "locale": "en-US",
-            "userAgent": f"{CLIENT_NAME}/{CLIENT_VERSION}",
+            "userAgent": f"{CLIENT_DISPLAY_NAME}/{CLIENT_VERSION}",
         }
 
         # Add authentication if token is provided

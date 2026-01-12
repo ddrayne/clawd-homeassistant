@@ -26,7 +26,8 @@ PROTOCOL_MIN_VERSION = 1
 PROTOCOL_MAX_VERSION = 1
 
 # Client identification
-CLIENT_NAME = "home-assistant-clawd"
+CLIENT_ID = "gateway-client"
+CLIENT_DISPLAY_NAME = "Home Assistant Clawd"
 CLIENT_VERSION = "1.0.0"
 CLIENT_PLATFORM = "python"
-CLIENT_MODE = "integration"
+CLIENT_MODE = "backend"
