@@ -8,6 +8,7 @@ from typing import Any, Callable
 
 import websockets
 from websockets.client import WebSocketClientProtocol
+from websockets.exceptions import ConnectionClosedError
 
 from .const import (
     CLIENT_DISPLAY_NAME,
@@ -272,6 +273,19 @@ class GatewayProtocol:
 
         except asyncio.CancelledError:
             _LOGGER.debug("Receive loop cancelled")
+            raise
+
+        except ConnectionClosedError as err:
+            # Handle WebSocket close gracefully
+            if err.rcvd and err.rcvd.code == 1012:
+                # Service restart - this is normal, will reconnect automatically
+                _LOGGER.info("Gateway is restarting, will reconnect automatically")
+            else:
+                _LOGGER.warning(
+                    "WebSocket connection closed: %s (code: %s)",
+                    err.rcvd.reason if err.rcvd else "unknown",
+                    err.rcvd.code if err.rcvd else "none",
+                )
             raise
 
         except Exception as err:  # pylint: disable=broad-except
