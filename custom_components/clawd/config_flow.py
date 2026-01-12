@@ -40,6 +40,7 @@ async def validate_connection(
         token=data.get(CONF_TOKEN),
         use_ssl=data.get(CONF_USE_SSL, DEFAULT_USE_SSL),
         timeout=data.get(CONF_TIMEOUT, DEFAULT_TIMEOUT),
+        session_key=data.get(CONF_SESSION_KEY, DEFAULT_SESSION_KEY),
     )
 
     try:

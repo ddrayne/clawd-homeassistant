@@ -342,6 +342,9 @@ class GatewayProtocol:
     ) -> None:
         """Dispatch event to registered handlers."""
         handlers = self._event_handlers.get(event_name, [])
+        _LOGGER.debug(
+            "Dispatching %s event to %d handler(s)", event_name, len(handlers)
+        )
         for handler in handlers:
             try:
                 if asyncio.iscoroutinefunction(handler):
@@ -363,6 +366,16 @@ class GatewayProtocol:
         # Prevent duplicate handler registration
         if handler not in self._event_handlers[event_name]:
             self._event_handlers[event_name].append(handler)
+            _LOGGER.debug(
+                "Registered event handler for %s (total handlers: %d)",
+                event_name,
+                len(self._event_handlers[event_name]),
+            )
+        else:
+            _LOGGER.warning(
+                "Attempted to register duplicate handler for %s (ignored)",
+                event_name,
+            )
 
     async def send_request(
         self,

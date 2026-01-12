@@ -1,6 +1,7 @@
 """Conversation entity for Clawd integration."""
 
 import logging
+import re
 
 from homeassistant.components import conversation
 from homeassistant.config_entries import ConfigEntry
@@ -17,6 +18,24 @@ from .exceptions import (
 from .gateway_client import ClawdGatewayClient
 
 _LOGGER = logging.getLogger(__name__)
+
+# Emoji pattern for removal from TTS
+EMOJI_PATTERN = re.compile(
+    "["
+    "\U0001F600-\U0001F64F"  # emoticons
+    "\U0001F300-\U0001F5FF"  # symbols & pictographs
+    "\U0001F680-\U0001F6FF"  # transport & map symbols
+    "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+    "\U00002702-\U000027B0"  # dingbats
+    "\U000024C2-\U0001F251"
+    "]+",
+    flags=re.UNICODE,
+)
+
+
+def strip_emojis(text: str) -> str:
+    """Remove emojis from text for TTS."""
+    return EMOJI_PATTERN.sub("", text).strip()
 
 
 async def async_setup_entry(
@@ -77,7 +96,7 @@ class ClawdConversationEntity(conversation.ConversationEntity):
                 user_message
             )
 
-            # Add assistant response to chat log
+            # Add assistant response to chat log (keep emojis for display)
             chat_log.async_add_assistant_content_without_tools(
                 conversation.AssistantContent(
                     agent_id=user_input.agent_id,
@@ -85,9 +104,10 @@ class ClawdConversationEntity(conversation.ConversationEntity):
                 )
             )
 
-            # Create intent response
+            # Create intent response with emoji-free text for TTS
             intent_response = intent.IntentResponse(language=user_input.language)
-            intent_response.async_set_speech(response_text)
+            speech_text = strip_emojis(response_text)
+            intent_response.async_set_speech(speech_text)
 
             return conversation.ConversationResult(
                 response=intent_response,
