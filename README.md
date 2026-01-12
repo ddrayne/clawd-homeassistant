@@ -49,7 +49,8 @@ Integrate [Clawdbot](https://docs.clawd.bot/) with Home Assistant's voice contro
    - **Port**: Gateway port (default: `18789`)
    - **Gateway Token**: Your authentication token (leave empty for localhost without authentication)
    - **Use SSL**: Check this for `wss://` connections (recommended for remote connections)
-   - **Agent Timeout**: Maximum time to wait for agent response in seconds (default: 30)
+   - **Agent Timeout**: Maximum time to wait for agent response in seconds (default: 30, recommended: 120)
+   - **Session Key**: Clawdbot session to use (default: `main` - the standard direct-chat session)
 
 5. Click **Submit**
 
@@ -150,6 +151,19 @@ You can update the Gateway connection settings without removing the integration:
 3. Click **Configure**
 4. Update settings as needed
 5. Click **Submit**
+
+### Session Keys
+
+The **Session Key** setting allows you to route Home Assistant conversations to specific Clawdbot sessions:
+
+- **Default (`main`)**: The standard direct-chat session - conversations appear in your main Clawdbot session
+- **Custom sessions**: Use a different session key to organize Home Assistant conversations separately
+- **Use cases**:
+  - Keep Home Assistant conversations isolated from other Clawdbot interactions
+  - Route to different agents if you have multiple configured
+  - Organize conversations by purpose (e.g., `home-assistant`, `automation`, etc.)
+
+To use a custom session, simply enter the desired session key in the integration configuration.
 
 ### Multiple Gateways
 
