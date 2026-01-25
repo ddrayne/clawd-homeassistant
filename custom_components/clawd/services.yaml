@@ -1,0 +1,8 @@
+reconnect:
+  name: Reconnect
+  description: Reconnect to the Clawd Gateway for one entry or all entries.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional entry ID to reconnect. When omitted, reconnects all entries.
+      example: "abcd1234efgh5678"

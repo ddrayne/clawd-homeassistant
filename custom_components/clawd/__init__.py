@@ -3,6 +3,8 @@
 import logging
 from datetime import timedelta
 
+import voluptuous as vol
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
@@ -27,6 +29,9 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.CONVERSATION]
 HEALTH_CHECK_INTERVAL = timedelta(seconds=60)
+SERVICE_RECONNECT = "reconnect"
+_SERVICE_REGISTERED = "_service_registered"
+_SERVICE_SCHEMA = vol.Schema({vol.Optional("entry_id"): str})
 
 _OPTION_KEYS = {
     CONF_TOKEN,
@@ -86,6 +91,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Store client in hass.data
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = gateway_client
+
+    if not hass.data[DOMAIN].get(_SERVICE_REGISTERED):
+        async def _async_handle_reconnect(call) -> None:
+            entry_id = call.data.get("entry_id")
+            clients = hass.data.get(DOMAIN, {})
+
+            if entry_id:
+                target = clients.get(entry_id)
+                if not target:
+                    _LOGGER.warning("Reconnect requested for unknown entry: %s", entry_id)
+                    return
+                targets = [target]
+            else:
+                targets = [
+                    client
+                    for key, client in clients.items()
+                    if key != _SERVICE_REGISTERED
+                ]
+
+            for client in targets:
+                await client.disconnect()
+                await client.connect()
+
+        hass.services.async_register(
+            DOMAIN, SERVICE_RECONNECT, _async_handle_reconnect, schema=_SERVICE_SCHEMA
+        )
+        hass.data[DOMAIN][_SERVICE_REGISTERED] = True
 
     # Forward setup to conversation platform
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
