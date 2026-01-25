@@ -1,5 +1,6 @@
 """The Clawd integration."""
 
+import inspect
 import logging
 
 import voluptuous as vol
@@ -184,9 +185,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Unload conversation platform even if the client was already cleared.
     try:
-        unload_ok = await hass.config_entries.async_unload_platforms(
+        unload_result = hass.config_entries.async_unload_platforms(
             entry, PLATFORMS
         )
+        if inspect.isawaitable(unload_result):
+            unload_ok = await unload_result
+        else:
+            unload_ok = bool(unload_result) if unload_result is not None else True
     except ValueError:
         _LOGGER.warning(
             "Conversation platform was not loaded for entry: %s", entry.entry_id
