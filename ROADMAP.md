@@ -46,15 +46,17 @@ data:
 ```
 
 ### 3. Model Selection & Reasoning Mode
-**Status:** Planned  
+**Status:** Partial  
 **Complexity:** Low  
 **Impact:** Medium
 
 Expose gateway's model selection and thinking capabilities.
 
-**Features:**
-- Per-request model override (fast vs. powerful)
+**Current:**
+- Per-request model override
 - Thinking/reasoning mode control (off/low/medium/high)
+
+**Planned:**
 - Auto-detect complex queries and enable reasoning
 - Cost-aware model selection
 
@@ -71,7 +73,7 @@ thinking_mode: "auto"   # off, low, medium, high, auto
 - Cost tracking per model
 
 ### 4. Session Management
-**Status:** Partial  
+**Status:** Backburner  
 **Complexity:** Low  
 **Impact:** Medium
 
@@ -81,7 +83,7 @@ Dynamic session switching and multi-session support.
 - Configurable session key
 - `clawd.set_session` service to switch the active session
 
-**Planned:**
+**Backburner:**
 - Multiple conversation entities for different sessions
 - Session history access (`sessions_history`)
 - Cross-session message sending (`sessions_send`)
@@ -200,15 +202,18 @@ Auto-adjust timeout based on query complexity.
 ## 📊 Observability & Diagnostics
 
 ### 1. Usage & Cost Tracking
-**Status:** Planned  
+**Status:** Partial  
 **Complexity:** Low  
 **Impact:** Medium
 
 Expose `session_status` metrics as HA sensors.
 
-**Sensors:**
+**Current:**
 - `sensor.clawd_tokens_used`
 - `sensor.clawd_estimated_cost`
+- `sensor.clawd_message_count`
+
+**Planned:**
 - `sensor.clawd_queries_today`
 - `sensor.clawd_avg_response_time`
 
@@ -240,10 +245,10 @@ Expand diagnostic data for troubleshooting.
 ## 🎯 Quick Wins (Easy Implementations)
 
 1. **`clawd.spawn_task` service** - Async task spawning (2-4 hours)
-2. **Thinking mode selector** - Config option for reasoning (1 hour)
+2. **Thinking mode selector** - Config option for reasoning (done)
 3. **Model strategy** - Fast/balanced/powerful presets (2 hours)
 4. **Session selector service** - Dynamic session switching (done)
-5. **Usage sensor** - Basic token/cost tracking (2-3 hours)
+5. **Usage sensor** - Basic token/cost tracking (done)
 
 ## 🔮 Future Considerations
 
@@ -265,10 +270,9 @@ Expand diagnostic data for troubleshooting.
 
 ### Phase 1: Core Enhancements (v1.1.0)
 - [x] Streaming responses
-- [ ] Model selection
-- [ ] Thinking mode control
-- [ ] Basic usage sensors
-- [ ] Session management (partial: session key + set_session service)
+- [x] Model selection
+- [x] Thinking mode control
+- [x] Basic usage sensors
 - [x] Connection pooling
 
 ### Phase 2: Advanced Features (v1.2.0)
@@ -286,6 +290,7 @@ Expand diagnostic data for troubleshooting.
 - [ ] Proactive notifications
 - [ ] Voice profiles
 - [ ] Advanced observability
+- [ ] Session management expansions
 
 ## Contributing
 
