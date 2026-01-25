@@ -178,12 +178,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data.get(DOMAIN, {}).get(entry.entry_id)
     )
     if gateway_client is None:
-        _LOGGER.warning(
+        _LOGGER.debug(
             "Entry not found in hass.data during unload: %s", entry.entry_id
         )
-        return True
 
-    # Unload conversation platform
+    # Unload conversation platform even if the client was already cleared.
     try:
         unload_ok = await hass.config_entries.async_unload_platforms(
             entry, PLATFORMS
@@ -195,9 +194,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         unload_ok = True
 
     # Always disconnect and cleanup, even if unload failed
-    await gateway_client.disconnect()
-    hass.data[DOMAIN].pop(entry.entry_id, None)
-    _LOGGER.info("Disconnected from Clawd Gateway")
+    if gateway_client is not None:
+        await gateway_client.disconnect()
+        _LOGGER.info("Disconnected from Clawd Gateway")
+    hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
 
     return unload_ok
 
