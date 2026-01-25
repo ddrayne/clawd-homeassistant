@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-25)
 
 **Core value:** Users can reliably talk to their Clawdbot agent through Home Assistant voice interfaces without connection failures or cryptic errors interrupting the experience.
-**Current focus:** Phase 3 - Protocol Mocking Infrastructure (next)
+**Current focus:** Phase 3 - Integration Tests (in progress)
 
 ## Current Position
 
-Phase: 2 of 7 (Simple Unit Tests) - COMPLETE
-Plan: 2 of 2 in current phase - COMPLETE
-Status: Phase complete, ready for Phase 3
-Last activity: 2026-01-25 - Completed Phase 2 (Simple Unit Tests)
+Phase: 3 of 7 (Integration Tests)
+Plan: 1 of 2 in current phase - COMPLETE
+Status: In progress
+Last activity: 2026-01-25 - Completed 03-01-PLAN.md (Core Integration Tests)
 
-Progress: [████░░░░░░] ~30%
+Progress: [████░░░░░░] ~40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 3 min
-- Total execution time: 0.27 hours
+- Total plans completed: 6
+- Average duration: 5 min
+- Total execution time: 0.52 hours
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [████░░░░░░] ~30%
 |-------|-------|-------|----------|
 | 01 | 3 | 10 min | 3 min |
 | 02 | 2 | 6 min | 3 min |
+| 03 | 1 | 15 min | 15 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (1 min), 01-03 (8 min), 02-01 (3 min), 02-02 (3 min)
-- Trend: Consistent ~3 min average
+- Last 5 plans: 01-03 (8 min), 02-01 (3 min), 02-02 (3 min), 03-01 (15 min)
+- Trend: 03-01 longer due to integration test complexity
 
 *Updated after each plan completion*
 
@@ -60,6 +61,9 @@ Recent decisions affecting current work:
 - pytest.mark.parametrize with ids for readable exception test output (02-01)
 - try/except import with local fallback for standalone mode testing (02-02)
 - Test actual behavior, document known limitations in docstrings (02-02)
+- pytest.mark.skipif for HA framework conditional tests (03-01)
+- Mock factory functions for test objects (03-01)
+- Error message constant validation for user-friendliness (03-01)
 
 ### Pending Todos
 
@@ -75,6 +79,9 @@ None yet.
 **Phase 2 (Simple Unit Tests):**
 - Direct module loading pattern required to bypass __init__.py imports - RESOLVED with importlib.util (02-01)
 
+**Phase 3 (Integration Tests):**
+- 9 tests skipped in standalone mode due to HA framework dependency - these will run in CI
+
 **Phase 5 (Protocol Layer):**
 - WebSocket mocking patterns require careful design to match real library behavior (reconnection, mid-operation failures)
 
@@ -83,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T17:20:00Z
-Stopped at: Completed Phase 2 - Simple Unit Tests (143 tests passing)
+Last session: 2026-01-25T17:40:00Z
+Stopped at: Completed 03-01-PLAN.md (180 tests passing, 10 skipped)
 Resume file: None
