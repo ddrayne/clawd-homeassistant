@@ -9,6 +9,7 @@ DEFAULT_USE_SSL = False
 DEFAULT_TIMEOUT = 30  # seconds
 DEFAULT_SESSION_KEY = "main"  # Default direct-chat session
 DEFAULT_MODEL = None
+DEFAULT_THINKING = None
 DEFAULT_STRIP_EMOJIS = True  # Strip emojis from TTS by default
 DEFAULT_TTS_MAX_CHARS = 0  # 0 disables TTS trimming
 
@@ -20,6 +21,7 @@ CONF_USE_SSL = "use_ssl"
 CONF_TIMEOUT = "timeout"
 CONF_SESSION_KEY = "session_key"
 CONF_MODEL = "model"
+CONF_THINKING = "thinking"
 CONF_STRIP_EMOJIS = "strip_emojis"
 CONF_TTS_MAX_CHARS = "tts_max_chars"
 

@@ -13,12 +13,14 @@ from .const import (
     CONF_MODEL,
     CONF_SESSION_KEY,
     CONF_STRIP_EMOJIS,
+    CONF_THINKING,
     CONF_TIMEOUT,
     CONF_TTS_MAX_CHARS,
     CONF_USE_SSL,
     DEFAULT_MODEL,
     DEFAULT_SESSION_KEY,
     DEFAULT_STRIP_EMOJIS,
+    DEFAULT_THINKING,
     DEFAULT_TIMEOUT,
     DEFAULT_TTS_MAX_CHARS,
     DEFAULT_USE_SSL,
@@ -46,6 +48,7 @@ _OPTION_KEYS = {
     CONF_TIMEOUT,
     CONF_SESSION_KEY,
     CONF_MODEL,
+    CONF_THINKING,
     CONF_STRIP_EMOJIS,
     CONF_TTS_MAX_CHARS,
 }
@@ -83,6 +86,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.data.get(CONF_SESSION_KEY, DEFAULT_SESSION_KEY),
         ),
         model=options.get(CONF_MODEL, entry.data.get(CONF_MODEL, DEFAULT_MODEL)),
+        thinking=options.get(
+            CONF_THINKING, entry.data.get(CONF_THINKING, DEFAULT_THINKING)
+        ),
     )
 
     # Connect to Gateway

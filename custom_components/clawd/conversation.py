@@ -120,6 +120,7 @@ class ClawdConversationEntity(conversation.ConversationEntity):
             "use_ssl": data.get("use_ssl"),
             "session_key": self._gateway_client.session_key,
             "model": self._gateway_client.model,
+            "thinking": self._gateway_client.thinking,
             "strip_emojis": data.get(CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS),
             "tts_max_chars": data.get(CONF_TTS_MAX_CHARS, DEFAULT_TTS_MAX_CHARS),
         }

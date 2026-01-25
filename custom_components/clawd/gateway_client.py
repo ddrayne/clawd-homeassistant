@@ -115,12 +115,14 @@ class ClawdGatewayClient:
         timeout: int = 30,
         session_key: str = "main",
         model: str | None = None,
+        thinking: str | None = None,
     ) -> None:
         """Initialize the Gateway client."""
         self._gateway = GatewayProtocol(host, port, token, use_ssl)
         self._timeout = timeout
         self._session_key = session_key
         self._model = model
+        self._thinking = thinking
         self._agent_runs: dict[str, AgentRun] = {}
 
         # Register event handler
@@ -165,6 +167,15 @@ class ClawdGatewayClient:
         """Set the configured model override."""
         self._model = model
 
+    @property
+    def thinking(self) -> str | None:
+        """Return the configured thinking mode override."""
+        return self._thinking
+
+    def set_thinking(self, thinking: str | None) -> None:
+        """Set the configured thinking mode override."""
+        self._thinking = thinking
+
     async def send_agent_request(
         self, message: str, idempotency_key: str | None = None
     ) -> str:
@@ -194,6 +205,8 @@ class ClawdGatewayClient:
             options: dict[str, Any] = {}
             if self._model:
                 options["model"] = self._model
+            if self._thinking:
+                options["thinking"] = self._thinking
             response = await self._gateway.send_request(
                 method="agent",
                 params={
@@ -292,6 +305,8 @@ class ClawdGatewayClient:
             options: dict[str, Any] = {}
             if self._model:
                 options["model"] = self._model
+            if self._thinking:
+                options["thinking"] = self._thinking
             response = await self._gateway.send_request(
                 method="agent",
                 params={

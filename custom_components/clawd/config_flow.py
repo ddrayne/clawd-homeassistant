@@ -16,6 +16,7 @@ from .const import (
     CONF_MODEL,
     CONF_SESSION_KEY,
     CONF_STRIP_EMOJIS,
+    CONF_THINKING,
     CONF_TTS_MAX_CHARS,
     CONF_USE_SSL,
     DEFAULT_HOST,
@@ -23,6 +24,7 @@ from .const import (
     DEFAULT_PORT,
     DEFAULT_SESSION_KEY,
     DEFAULT_STRIP_EMOJIS,
+    DEFAULT_THINKING,
     DEFAULT_TTS_MAX_CHARS,
     DEFAULT_TIMEOUT,
     DEFAULT_USE_SSL,
@@ -122,6 +124,23 @@ def _build_session_selector(
         )
     )
 
+def _build_thinking_selector() -> selector.SelectSelector:
+    """Build a thinking mode selector."""
+    options = [
+        {"label": "Default", "value": ""},
+        {"label": "Off", "value": "off"},
+        {"label": "Low", "value": "low"},
+        {"label": "Medium", "value": "medium"},
+        {"label": "High", "value": "high"},
+    ]
+    return selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=options,
+            mode=selector.SelectSelectorMode.DROPDOWN,
+            custom_value=True,
+        )
+    )
+
 
 class ClawdConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Clawd."""
@@ -198,6 +217,9 @@ class ClawdConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             model = user_input.get(CONF_MODEL)
             if not model:
                 user_input.pop(CONF_MODEL, None)
+            thinking = user_input.get(CONF_THINKING)
+            if not thinking:
+                user_input.pop(CONF_THINKING, None)
             data = {**self._config_data, **user_input}
             return self.async_create_entry(
                 title=self._config_title, data=data
@@ -207,13 +229,18 @@ class ClawdConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_SESSION_KEY, DEFAULT_SESSION_KEY
         )
         current_model = self._config_data.get(CONF_MODEL, DEFAULT_MODEL) or ""
+        current_thinking = (
+            self._config_data.get(CONF_THINKING, DEFAULT_THINKING) or ""
+        )
         session_keys = await _async_fetch_sessions(self.hass, self._config_data)
         session_selector = _build_session_selector(session_keys, current_session)
+        thinking_selector = _build_thinking_selector()
 
         data_schema = vol.Schema(
             {
                 vol.Optional(CONF_SESSION_KEY, default=current_session): session_selector,
                 vol.Optional(CONF_MODEL, default=current_model): str,
+                vol.Optional(CONF_THINKING, default=current_thinking): thinking_selector,
                 vol.Optional(
                     CONF_STRIP_EMOJIS, default=DEFAULT_STRIP_EMOJIS
                 ): bool,
@@ -275,12 +302,13 @@ class ClawdOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_USE_SSL: user_input.get(CONF_USE_SSL, DEFAULT_USE_SSL),
                     CONF_TIMEOUT: user_input.get(CONF_TIMEOUT, DEFAULT_TIMEOUT),
                     CONF_SESSION_KEY: user_input.get(
-                        CONF_SESSION_KEY, DEFAULT_SESSION_KEY
-                    ),
-                    CONF_MODEL: user_input.get(CONF_MODEL) or None,
-                    CONF_STRIP_EMOJIS: user_input.get(
-                        CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS
-                    ),
+                    CONF_SESSION_KEY, DEFAULT_SESSION_KEY
+                ),
+                CONF_MODEL: user_input.get(CONF_MODEL) or None,
+                CONF_THINKING: user_input.get(CONF_THINKING) or None,
+                CONF_STRIP_EMOJIS: user_input.get(
+                    CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS
+                ),
                     CONF_TTS_MAX_CHARS: user_input.get(
                         CONF_TTS_MAX_CHARS, DEFAULT_TTS_MAX_CHARS
                     ),
@@ -298,9 +326,11 @@ class ClawdOptionsFlowHandler(config_entries.OptionsFlow):
         session_keys = await _async_fetch_sessions(self.hass, current)
         current_session = current.get(CONF_SESSION_KEY, DEFAULT_SESSION_KEY)
         current_model = current.get(CONF_MODEL, DEFAULT_MODEL) or ""
+        current_thinking = current.get(CONF_THINKING, DEFAULT_THINKING) or ""
         session_selector = _build_session_selector(
             session_keys, current_session
         )
+        thinking_selector = _build_thinking_selector()
 
         data_schema = vol.Schema(
             {
@@ -323,6 +353,7 @@ class ClawdOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_SESSION_KEY, default=current_session
                 ): session_selector,
                 vol.Optional(CONF_MODEL, default=current_model): str,
+                vol.Optional(CONF_THINKING, default=current_thinking): thinking_selector,
                 vol.Optional(
                     CONF_STRIP_EMOJIS,
                     default=current.get(CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS),
