@@ -13,11 +13,13 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client, selector
 
 from .const import (
+    CONF_MODEL,
     CONF_SESSION_KEY,
     CONF_STRIP_EMOJIS,
     CONF_TTS_MAX_CHARS,
     CONF_USE_SSL,
     DEFAULT_HOST,
+    DEFAULT_MODEL,
     DEFAULT_PORT,
     DEFAULT_SESSION_KEY,
     DEFAULT_STRIP_EMOJIS,
@@ -193,6 +195,9 @@ class ClawdConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            model = user_input.get(CONF_MODEL)
+            if not model:
+                user_input.pop(CONF_MODEL, None)
             data = {**self._config_data, **user_input}
             return self.async_create_entry(
                 title=self._config_title, data=data
@@ -201,12 +206,14 @@ class ClawdConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         current_session = self._config_data.get(
             CONF_SESSION_KEY, DEFAULT_SESSION_KEY
         )
+        current_model = self._config_data.get(CONF_MODEL, DEFAULT_MODEL) or ""
         session_keys = await _async_fetch_sessions(self.hass, self._config_data)
         session_selector = _build_session_selector(session_keys, current_session)
 
         data_schema = vol.Schema(
             {
                 vol.Optional(CONF_SESSION_KEY, default=current_session): session_selector,
+                vol.Optional(CONF_MODEL, default=current_model): str,
                 vol.Optional(
                     CONF_STRIP_EMOJIS, default=DEFAULT_STRIP_EMOJIS
                 ): bool,
@@ -270,6 +277,7 @@ class ClawdOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_SESSION_KEY: user_input.get(
                         CONF_SESSION_KEY, DEFAULT_SESSION_KEY
                     ),
+                    CONF_MODEL: user_input.get(CONF_MODEL) or None,
                     CONF_STRIP_EMOJIS: user_input.get(
                         CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS
                     ),
@@ -289,6 +297,7 @@ class ClawdOptionsFlowHandler(config_entries.OptionsFlow):
         current = {**self.config_entry.data, **self.config_entry.options}
         session_keys = await _async_fetch_sessions(self.hass, current)
         current_session = current.get(CONF_SESSION_KEY, DEFAULT_SESSION_KEY)
+        current_model = current.get(CONF_MODEL, DEFAULT_MODEL) or ""
         session_selector = _build_session_selector(
             session_keys, current_session
         )
@@ -313,6 +322,7 @@ class ClawdOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_SESSION_KEY, default=current_session
                 ): session_selector,
+                vol.Optional(CONF_MODEL, default=current_model): str,
                 vol.Optional(
                     CONF_STRIP_EMOJIS,
                     default=current.get(CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS),

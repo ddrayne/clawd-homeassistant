@@ -114,11 +114,13 @@ class ClawdGatewayClient:
         use_ssl: bool = False,
         timeout: int = 30,
         session_key: str = "main",
+        model: str | None = None,
     ) -> None:
         """Initialize the Gateway client."""
         self._gateway = GatewayProtocol(host, port, token, use_ssl)
         self._timeout = timeout
         self._session_key = session_key
+        self._model = model
         self._agent_runs: dict[str, AgentRun] = {}
 
         # Register event handler
@@ -154,6 +156,15 @@ class ClawdGatewayClient:
         """Set the active session key for new requests."""
         self._session_key = session_key
 
+    @property
+    def model(self) -> str | None:
+        """Return the configured model override."""
+        return self._model
+
+    def set_model(self, model: str | None) -> None:
+        """Set the configured model override."""
+        self._model = model
+
     async def send_agent_request(
         self, message: str, idempotency_key: str | None = None
     ) -> str:
@@ -180,12 +191,16 @@ class ClawdGatewayClient:
 
         # Send agent request
         try:
+            options: dict[str, Any] = {}
+            if self._model:
+                options["model"] = self._model
             response = await self._gateway.send_request(
                 method="agent",
                 params={
                     "message": message,
                     "sessionKey": self._session_key,
                     "idempotencyKey": idempotency_key,
+                    **({"options": options} if options else {}),
                 },
                 timeout=10.0,  # Initial ack should be quick
             )
@@ -274,12 +289,16 @@ class ClawdGatewayClient:
         _LOGGER.debug("Streaming agent request with key: %s", idempotency_key)
 
         try:
+            options: dict[str, Any] = {}
+            if self._model:
+                options["model"] = self._model
             response = await self._gateway.send_request(
                 method="agent",
                 params={
                     "message": message,
                     "sessionKey": self._session_key,
                     "idempotencyKey": idempotency_key,
+                    **({"options": options} if options else {}),
                 },
                 timeout=10.0,
             )

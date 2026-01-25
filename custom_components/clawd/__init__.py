@@ -10,11 +10,13 @@ from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
 
 from .const import (
+    CONF_MODEL,
+    CONF_SESSION_KEY,
     CONF_STRIP_EMOJIS,
     CONF_TIMEOUT,
-    CONF_SESSION_KEY,
     CONF_TTS_MAX_CHARS,
     CONF_USE_SSL,
+    DEFAULT_MODEL,
     DEFAULT_SESSION_KEY,
     DEFAULT_STRIP_EMOJIS,
     DEFAULT_TIMEOUT,
@@ -43,6 +45,7 @@ _OPTION_KEYS = {
     CONF_USE_SSL,
     CONF_TIMEOUT,
     CONF_SESSION_KEY,
+    CONF_MODEL,
     CONF_STRIP_EMOJIS,
     CONF_TTS_MAX_CHARS,
 }
@@ -79,6 +82,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             CONF_SESSION_KEY,
             entry.data.get(CONF_SESSION_KEY, DEFAULT_SESSION_KEY),
         ),
+        model=options.get(CONF_MODEL, entry.data.get(CONF_MODEL, DEFAULT_MODEL)),
     )
 
     # Connect to Gateway
