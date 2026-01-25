@@ -1,5 +1,7 @@
 # Clawd Voice Assistant for Home Assistant
 
+[![Tests](https://github.com/ddrayne/clawd-homeassistant/actions/workflows/tests.yml/badge.svg)](https://github.com/ddrayne/clawd-homeassistant/actions/workflows/tests.yml)
+
 <p align="center">
   <img src="custom_components/clawd/icon.png" alt="Clawd Icon" width="128" height="128">
 </p>
