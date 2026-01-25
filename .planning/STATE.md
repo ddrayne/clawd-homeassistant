@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 1 of 7 (Test Infrastructure Foundation)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-01-25 - Completed 01-01-PLAN.md (Test Foundation Setup)
+Last activity: 2026-01-25 - Completed 01-02-PLAN.md (Core Test Fixtures)
 
-Progress: [█░░░░░░░░░] ~5%
+Progress: [██░░░░░░░░] ~10%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
+- Total plans completed: 2
 - Average duration: 1 min
-- Total execution time: 0.02 hours
+- Total execution time: 0.03 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 1 | 1 min | 1 min |
+| 01 | 2 | 2 min | 1 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (1 min)
-- Trend: Not established (need more data)
+- Last 5 plans: 01-01 (1 min), 01-02 (1 min)
+- Trend: Consistent 1 min per plan
 
 *Updated after each plan completion*
 
@@ -48,6 +48,9 @@ Recent decisions affecting current work:
 - asyncio_mode = "auto" for automatic async test handling (01-01)
 - Function-scoped fixtures via asyncio_default_fixture_loop_scope (01-01)
 - pytest-homeassistant-custom-component >=0.13.200 for Python 3.11+ (01-01)
+- Factory pattern for mock_config_entry (01-02)
+- Patch target is gateway module, not websockets directly (01-02)
+- Async generator pattern for mock connect (01-02)
 
 ### Pending Todos
 
@@ -57,7 +60,7 @@ None yet.
 
 **Phase 1 (Test Infrastructure):**
 - ~~Need to verify pytest-asyncio and pytest-homeassistant-custom-component versions compatible with Python 3.11+~~ RESOLVED: Using >=0.13.200
-- Must establish cleanup pattern early to prevent "Event loop is closed" errors in all subsequent tests
+- ~~Must establish cleanup pattern early to prevent "Event loop is closed" errors in all subsequent tests~~ RESOLVED: async_cleanup fixture created (01-02)
 
 **Phase 5 (Protocol Layer):**
 - WebSocket mocking patterns require careful design to match real library behavior (reconnection, mid-operation failures)
@@ -67,6 +70,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T16:29:39Z
-Stopped at: Completed 01-01-PLAN.md (Test Foundation Setup)
+Last session: 2026-01-25T16:32:27Z
+Stopped at: Completed 01-02-PLAN.md (Core Test Fixtures)
 Resume file: None
