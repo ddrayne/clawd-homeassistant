@@ -30,7 +30,7 @@ from .gateway_client import ClawdGatewayClient
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.CONVERSATION]
+PLATFORMS: list[Platform] = [Platform.CONVERSATION, Platform.SENSOR]
 SERVICE_RECONNECT = "reconnect"
 SERVICE_SET_SESSION = "set_session"
 _SERVICE_REGISTERED = "_service_registered"
