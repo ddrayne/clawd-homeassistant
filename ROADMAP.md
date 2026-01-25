@@ -5,36 +5,16 @@ This document outlines planned features, optimizations, and improvements for the
 ## 🔥 High Priority Features
 
 ### 1. Streaming Responses
-**Status:** Planned  
+**Status:** Implemented  
 **Complexity:** Medium  
 **Impact:** High
 
-The Clawdbot Gateway supports WebSocket streaming for real-time response delivery.
+Streaming responses are supported when the Home Assistant conversation API exposes a streaming result. The integration streams cumulative agent output from the Gateway and falls back to buffered responses on older HA versions.
 
-**Benefits:**
-- Faster perceived response time (start speaking while generating)
-- Better UX for long responses
-- Can begin TTS generation before full response completes
-- Visual feedback ("Clawd is thinking...")
-
-**Implementation:**
-- Switch from buffered to streaming WebSocket connection
-- Process tokens as they arrive
-- Start TTS generation on sentence boundaries
-- Add streaming indicator to HA UI
-
-**Technical Details:**
-```python
-# Current: Wait for complete response
-response = await self._send_message(user_input)
-
-# Proposed: Stream tokens
-async for token in self._stream_message(user_input):
-    buffer += token
-    if sentence_complete(buffer):
-        yield buffer
-        buffer = ""
-```
+**Current Behavior:**
+- Uses streaming conversation results when available
+- Streams output chunks as the Gateway publishes agent events
+- Falls back to buffered responses if HA doesn't support streaming
 
 ### 2. Sub-Agent Task Spawning
 **Status:** Planned  
@@ -91,14 +71,17 @@ thinking_mode: "auto"   # off, low, medium, high, auto
 - Cost tracking per model
 
 ### 4. Session Management
-**Status:** Planned  
+**Status:** Partial  
 **Complexity:** Low  
 **Impact:** Medium
 
 Dynamic session switching and multi-session support.
 
-**Features:**
-- Service to switch active session
+**Current:**
+- Configurable session key
+- `clawd.set_session` service to switch the active session
+
+**Planned:**
 - Multiple conversation entities for different sessions
 - Session history access (`sessions_history`)
 - Cross-session message sending (`sessions_send`)
@@ -149,14 +132,11 @@ Integrate with gateway's cron system for scheduled tasks.
 ## ⚡ Performance Optimizations
 
 ### 1. Connection Pooling & Keepalive
-**Status:** Planned  
+**Status:** Implemented  
 **Complexity:** Low  
 **Impact:** Medium
 
-Replace periodic health checks with persistent WebSocket + heartbeat.
-
-**Current:** HTTP health check every 60s  
-**Proposed:** Persistent WebSocket with ping/pong keepalive
+Persistent WebSocket connection with ping/pong keepalive and automatic reconnects.
 
 **Benefits:**
 - Lower latency on first request
@@ -239,11 +219,16 @@ Expose `session_status` metrics as HA sensors.
 - Usage patterns
 
 ### 2. Enhanced Diagnostics
-**Status:** Planned  
+**Status:** Partial  
 **Complexity:** Low  
 **Impact:** Low
 
 Expand diagnostic data for troubleshooting.
+
+**Current:**
+- Connection status
+- Redacted config/options
+- Gateway health (when reachable)
 
 **Additional Data:**
 - WebSocket connection stats
@@ -257,7 +242,7 @@ Expand diagnostic data for troubleshooting.
 1. **`clawd.spawn_task` service** - Async task spawning (2-4 hours)
 2. **Thinking mode selector** - Config option for reasoning (1 hour)
 3. **Model strategy** - Fast/balanced/powerful presets (2 hours)
-4. **Session selector service** - Dynamic session switching (1-2 hours)
+4. **Session selector service** - Dynamic session switching (done)
 5. **Usage sensor** - Basic token/cost tracking (2-3 hours)
 
 ## 🔮 Future Considerations
@@ -279,12 +264,12 @@ Expand diagnostic data for troubleshooting.
 ## Implementation Priority
 
 ### Phase 1: Core Enhancements (v1.1.0)
-- [ ] Streaming responses
+- [x] Streaming responses
 - [ ] Model selection
 - [ ] Thinking mode control
 - [ ] Basic usage sensors
-- [ ] Session management
-- [ ] Connection pooling
+- [ ] Session management (partial: session key + set_session service)
+- [x] Connection pooling
 
 ### Phase 2: Advanced Features (v1.2.0)
 - [ ] Sub-agent spawning
@@ -317,4 +302,4 @@ Have ideas for other enhancements? Open an issue with the `enhancement` label!
 ---
 
 *Last Updated: 2026-01-25*  
-*Integration Version: 1.0.0*
+*Integration Version: 1.0.1*

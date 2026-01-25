@@ -23,12 +23,13 @@ This integration lets you access your **entire Clawdbot agent** - with all its s
 - **Multi-Model Support**: Works with whatever AI model you've configured (Claude, GPT, local models)
 
 ### Integration Features
-- **Direct WebSocket Connection**: Real-time connection to Clawdbot Gateway
+- **Direct WebSocket Connection**: Real-time, persistent connection to Clawdbot Gateway
 - **Smart TTS Processing**: Configurable emoji stripping for clean text-to-speech output
 - **Voice-Friendly Limits**: Optional TTS response trimming to keep speech concise
 - **Flexible Authentication**: Secure token-based auth with SSL/TLS support
-- **Reliable Connection**: Automatic health checks, reconnects, and graceful error handling
-- **Customizable Sessions**: Route conversations to different Clawdbot sessions
+- **Reliable Connection**: Keepalive pings, automatic reconnects, and graceful error handling
+- **Customizable Sessions**: Route conversations to different Clawdbot sessions and switch sessions via service
+- **Streaming Responses**: Stream output when Home Assistant supports streaming conversation results
 - **Fast Responses**: Typical response time of 5-10 seconds for most queries
 - **Easy Configuration**: Simple UI-based setup through Home Assistant
 - **Diagnostics Support**: Built-in diagnostics for troubleshooting
