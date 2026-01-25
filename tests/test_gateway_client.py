@@ -169,3 +169,63 @@ class TestSendAgentRequest:
             await task
 
         assert client._agent_runs == {}
+
+
+class TestStreamAgentRequest:
+    @pytest.mark.asyncio
+    async def test_streams_chunks_and_cleans_up(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, None)
+        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
+            return_value={"payload": {"runId": "run-1"}}
+        )
+
+        chunks: list[str] = []
+
+        async def consume():
+            async for chunk in client.stream_agent_request(
+                "hello", idempotency_key="fixed"
+            ):
+                chunks.append(chunk)
+
+        task = asyncio.create_task(consume())
+
+        for _ in range(50):
+            if "run-1" in client._agent_runs:
+                break
+            await asyncio.sleep(0)
+        assert "run-1" in client._agent_runs
+
+        client._handle_agent_event(
+            {"payload": {"runId": "run-1", "output": "Hi"}}
+        )
+        client._handle_agent_event(
+            {"payload": {"runId": "run-1", "output": "Hi there"}}
+        )
+        client._handle_agent_event(
+            {"payload": {"runId": "run-1", "status": "ok"}}
+        )
+
+        await task
+        assert chunks == ["Hi", " there"]
+        assert client._agent_runs == {}
+
+        client._gateway.send_request.assert_called_once()  # type: ignore[attr-defined]
+        params = client._gateway.send_request.call_args.kwargs["params"]  # type: ignore[attr-defined]
+        assert params["idempotencyKey"] == "fixed"
+
+    @pytest.mark.asyncio
+    async def test_stream_timeout_raises_and_cleans_up(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, None, timeout=0)
+        client._timeout = 0.01
+        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
+            return_value={"payload": {"runId": "run-1"}}
+        )
+
+        async def consume():
+            async for _ in client.stream_agent_request("hello"):
+                pass
+
+        with pytest.raises(GatewayTimeoutError):
+            await consume()
+
+        assert client._agent_runs == {}

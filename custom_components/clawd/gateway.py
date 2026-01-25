@@ -3,11 +3,11 @@
 import asyncio
 import json
 import logging
+import time
 import uuid
 from typing import Any, Callable
 
-import websockets
-from websockets.client import WebSocketClientProtocol
+from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosedError
 
 from .const import (
@@ -45,11 +45,14 @@ class GatewayProtocol:
         self._use_ssl = use_ssl
 
         # Connection state
-        self._websocket: WebSocketClientProtocol | None = None
+        self._websocket: Any | None = None
         self._connected = False
         self._connected_event = asyncio.Event()
         self._connect_task: asyncio.Task | None = None
         self._receive_task: asyncio.Task | None = None
+        self._heartbeat_task: asyncio.Task | None = None
+        self._heartbeat_interval = 30
+        self._last_pong = 0.0
 
         # Request/response correlation
         self._pending_requests: dict[str, asyncio.Future] = {}
@@ -87,6 +90,13 @@ class GatewayProtocol:
             except asyncio.CancelledError:
                 pass
 
+        if self._heartbeat_task:
+            self._heartbeat_task.cancel()
+            try:
+                await self._heartbeat_task
+            except asyncio.CancelledError:
+                pass
+
         if self._connect_task:
             self._connect_task.cancel()
             try:
@@ -112,21 +122,25 @@ class GatewayProtocol:
         while True:
             try:
                 _LOGGER.info("Connecting to Gateway at %s", self._uri)
-                async for websocket in websockets.connect(
+                async with connect(
                     self._uri,
                     ping_interval=30,
                     ping_timeout=10,
-                ):
+                ) as websocket:
                     self._websocket = websocket
                     try:
                         await self._handshake()
                         self._connected = True
                         self._connected_event.set()
                         _LOGGER.info("Connected to Gateway successfully")
+                        self._last_pong = time.monotonic()
 
                         # Start receive loop
                         self._receive_task = asyncio.create_task(
                             self._receive_loop()
+                        )
+                        self._heartbeat_task = asyncio.create_task(
+                            self._heartbeat_loop()
                         )
                         await self._receive_task
 
@@ -135,40 +149,24 @@ class GatewayProtocol:
                         ProtocolError,
                     ) as err:
                         _LOGGER.error("Gateway error: %s", err)
-                        self._connected = False
-                        self._connected_event.clear()
                         raise
 
-                    except ConnectionClosedError as err:
-                        # Handle WebSocket close gracefully
-                        self._connected = False
-                        self._connected_event.clear()
-                        if err.rcvd and err.rcvd.code == 1012:
-                            # Service restart - this is normal, will reconnect
-                            _LOGGER.info("Gateway is restarting, will reconnect")
-                        else:
-                            _LOGGER.warning(
-                                "Connection closed: %s (code: %s)",
-                                err.rcvd.reason if err.rcvd else "unknown",
-                                err.rcvd.code if err.rcvd else "none",
-                            )
-
-                    except Exception as err:  # pylint: disable=broad-except
-                        _LOGGER.error(
-                            "Unexpected error in connection: %s",
-                            err,
-                            exc_info=True,
-                        )
-                        self._connected = False
-                        self._connected_event.clear()
-
                     finally:
+                        self._connected = False
+                        self._connected_event.clear()
                         if self._receive_task:
                             self._receive_task.cancel()
                             try:
                                 await self._receive_task
                             except asyncio.CancelledError:
                                 pass
+                        if self._heartbeat_task:
+                            self._heartbeat_task.cancel()
+                            try:
+                                await self._heartbeat_task
+                            except asyncio.CancelledError:
+                                pass
+                        self._websocket = None
 
             except asyncio.CancelledError:
                 _LOGGER.debug("Connection loop cancelled")
@@ -181,6 +179,18 @@ class GatewayProtocol:
                     "Stopping connection attempts."
                 )
                 break
+
+            except ConnectionClosedError as err:
+                if err.rcvd and err.rcvd.code == 1012:
+                    # Service restart - this is normal, will reconnect
+                    _LOGGER.info("Gateway is restarting, will reconnect")
+                else:
+                    _LOGGER.warning(
+                        "Connection closed: %s (code: %s)",
+                        err.rcvd.reason if err.rcvd else "unknown",
+                        err.rcvd.code if err.rcvd else "none",
+                    )
+                await asyncio.sleep(5)
 
             except Exception as err:  # pylint: disable=broad-except
                 _LOGGER.warning(
@@ -344,8 +354,38 @@ class GatewayProtocol:
             else:
                 _LOGGER.warning("Event message without event name")
 
+        elif message_type == "ping":
+            await self._send_pong()
+
+        elif message_type == "pong":
+            self._last_pong = time.monotonic()
+            _LOGGER.debug("Received heartbeat pong")
+
         else:
             _LOGGER.warning("Unknown message type: %s", message_type)
+
+    async def _send_pong(self) -> None:
+        """Respond to a heartbeat ping."""
+        if not self._websocket:
+            return
+        try:
+            await self._websocket.send(json.dumps({"type": "pong"}))
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.debug("Failed to send pong: %s", err)
+
+    async def _heartbeat_loop(self) -> None:
+        """Send heartbeat pings while connected."""
+        while self._connected and self._websocket:
+            try:
+                await asyncio.sleep(self._heartbeat_interval)
+                if not self._connected or not self._websocket:
+                    break
+                await self._websocket.send(json.dumps({"type": "ping"}))
+            except asyncio.CancelledError:
+                raise
+            except Exception as err:  # pylint: disable=broad-except
+                _LOGGER.warning("Heartbeat failed: %s", err)
+                break
 
     async def _dispatch_event(
         self, event_name: str, event: dict[str, Any]

@@ -244,7 +244,7 @@ Home Assistant provides a diagnostics panel for the integration:
 ## Limitations
 
 - **Response time**: Typical queries take 5-10 seconds. Agent tasks (emails, web browsing, file access) may take longer depending on complexity. This is slower than traditional rule-based voice assistants (1-2 seconds) but provides significantly more capability
-- **Streaming**: Responses are buffered and returned complete (no streaming TTS support during generation)
+- **Streaming**: Streams partial responses when Home Assistant supports streaming; older versions fall back to buffered responses
 - **Home Automation**: Best used alongside Home Assistant's native intents for device control. Your Clawdbot excels at information, complex tasks, email/calendar management, and agentic workflows rather than simple "turn on the lights" commands
 - **Context**: Conversation history within Home Assistant is managed by ChatLog. Your Clawdbot's persistent memory across all platforms remains intact
 - **Capabilities**: What your voice assistant can do depends entirely on your Clawdbot configuration, installed skills, and service integrations
@@ -287,6 +287,16 @@ The **Session Key** setting allows you to route Home Assistant conversations to 
   - Organize conversations by purpose (e.g., `home-assistant`, `automation`, etc.)
 
 To use a custom session, simply enter the desired session key in the integration configuration.
+
+You can also switch sessions dynamically with the `clawd.set_session` service:
+
+```yaml
+service: clawd.set_session
+data:
+  session_key: "voice-assistant"
+```
+
+This updates the active session for new requests until the integration reloads or is reconfigured.
 
 ### Voice-Optimized Session Configuration
 

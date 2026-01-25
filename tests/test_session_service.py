@@ -1,4 +1,4 @@
-"""Tests for reconnect service registration (HA-free)."""
+"""Tests for session switching service registration (HA-free)."""
 
 import importlib.util
 import sys
@@ -18,7 +18,7 @@ def _load_module(name: str, path: Path):
 
 
 @pytest.mark.asyncio
-async def test_reconnect_service_calls_clients() -> None:
+async def test_set_session_service_updates_client() -> None:
     sys.modules.setdefault("homeassistant", ModuleType("homeassistant"))
     config_entries_mod = ModuleType("homeassistant.config_entries")
     const_mod = ModuleType("homeassistant.const")
@@ -45,7 +45,7 @@ async def test_reconnect_service_calls_clients() -> None:
     sys.modules.setdefault("custom_components", ModuleType("custom_components"))
     sys.modules.setdefault("custom_components.clawd", ModuleType("custom_components.clawd"))
 
-    _load_module("custom_components.clawd.const", base / "const.py")
+    const = _load_module("custom_components.clawd.const", base / "const.py")
 
     gateway_client_mod = ModuleType("custom_components.clawd.gateway_client")
     sys.modules["custom_components.clawd.gateway_client"] = gateway_client_mod
@@ -55,6 +55,7 @@ async def test_reconnect_service_calls_clients() -> None:
             self.disconnect = AsyncMock()
             self.connect = AsyncMock()
             self.connected = True
+            self.set_session_key = MagicMock()
 
     gateway_client_mod.ClawdGatewayClient = ClawdGatewayClient
 
@@ -75,17 +76,15 @@ async def test_reconnect_service_calls_clients() -> None:
 
     handler = None
     for call in hass.services.async_register.call_args_list:
-        if call.args[1] == integration.SERVICE_RECONNECT:
+        if call.args[1] == integration.SERVICE_SET_SESSION:
             handler = call.args[2]
             break
     assert handler is not None
+
     client = hass.data[integration.DOMAIN]["entry-1"]
-    client.connect.reset_mock()
-    client.disconnect.reset_mock()
 
     call = MagicMock()
-    call.data = {}
+    call.data = {const.CONF_SESSION_KEY: "voice-assistant"}
     await handler(call)
 
-    client.disconnect.assert_called_once()
-    client.connect.assert_called_once()
+    client.set_session_key.assert_called_once_with("voice-assistant")

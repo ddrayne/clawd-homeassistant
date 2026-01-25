@@ -109,6 +109,26 @@ class TestMessageHandling:
 
         assert len(seen) == 1
 
+    @pytest.mark.asyncio
+    async def test_ping_sends_pong(self) -> None:
+        protocol = GatewayProtocol("localhost", 1, None)
+        protocol._websocket = AsyncMock()
+
+        await protocol._handle_message({"type": "ping"})
+
+        protocol._websocket.send.assert_awaited_once()
+        payload = json.loads(protocol._websocket.send.call_args.args[0])
+        assert payload == {"type": "pong"}
+
+    @pytest.mark.asyncio
+    async def test_pong_updates_timestamp(self) -> None:
+        protocol = GatewayProtocol("localhost", 1, None)
+        protocol._last_pong = 0.0
+
+        await protocol._handle_message({"type": "pong"})
+
+        assert protocol._last_pong > 0.0
+
 
 class TestHandshake:
     @pytest.mark.asyncio

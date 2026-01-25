@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 import uuid
-from typing import Any
+from typing import Any, AsyncIterator
 
 from .exceptions import (
     AgentExecutionError,
@@ -18,7 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 class AgentRun:
     """Tracks an agent run and buffers its events."""
 
-    def __init__(self, run_id: str) -> None:
+    def __init__(self, run_id: str, stream: bool = False) -> None:
         """Initialize agent run tracker."""
         self.run_id = run_id
         self.status: str | None = None
@@ -26,6 +26,10 @@ class AgentRun:
         self.complete_event = asyncio.Event()
         # Gateway sends cumulative text, not incremental
         self._full_text: str = ""
+        self._stream_queue: asyncio.Queue[str | None] | None = (
+            asyncio.Queue() if stream else None
+        )
+        self._streamed_any = False
 
     def add_output(self, output: str) -> None:
         """Add output to buffer. Gateway sends cumulative text, extract only new chars."""
@@ -52,19 +56,51 @@ class AgentRun:
                 len(self._full_text),
                 len(output),
             )
+            new_text = output
             self._full_text = output
+
+        if new_text and self._stream_queue is not None:
+            self._stream_queue.put_nowait(new_text)
+            self._streamed_any = True
 
     def set_complete(self, status: str, summary: str | None = None) -> None:
         """Mark run as complete."""
         self.status = status
         self.summary = summary
         self.complete_event.set()
+        if self._stream_queue is not None:
+            if summary and not self._streamed_any:
+                self._stream_queue.put_nowait(summary)
+                self._streamed_any = True
+            self._stream_queue.put_nowait(None)
 
     def get_response(self) -> str:
         """Get assembled response."""
         if self.summary:
             return self.summary
         return self._full_text
+
+    async def iter_stream(self, timeout: float) -> AsyncIterator[str]:
+        """Yield output chunks until completion or timeout."""
+        if self._stream_queue is None:
+            self._stream_queue = asyncio.Queue()
+
+        deadline = time.monotonic() + timeout
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise GatewayTimeoutError("Agent response timeout")
+            try:
+                chunk = await asyncio.wait_for(
+                    self._stream_queue.get(), timeout=remaining
+                )
+            except asyncio.TimeoutError as err:
+                raise GatewayTimeoutError(
+                    "Agent response timeout"
+                ) from err
+            if chunk is None:
+                break
+            yield chunk
 
 
 class ClawdGatewayClient:
@@ -108,6 +144,15 @@ class ClawdGatewayClient:
     def connected(self) -> bool:
         """Return whether connected to Gateway."""
         return self._gateway.connected
+
+    @property
+    def session_key(self) -> str:
+        """Return the active session key."""
+        return self._session_key
+
+    def set_session_key(self, session_key: str) -> None:
+        """Set the active session key for new requests."""
+        self._session_key = session_key
 
     async def send_agent_request(
         self, message: str, idempotency_key: str | None = None
@@ -203,6 +248,81 @@ class ClawdGatewayClient:
         except Exception as err:
             _LOGGER.error(
                 "Error in agent request: %s", err, exc_info=True
+            )
+            raise AgentExecutionError(str(err)) from err
+
+    async def stream_agent_request(
+        self, message: str, idempotency_key: str | None = None
+    ) -> AsyncIterator[str]:
+        """
+        Send agent request and stream response chunks.
+
+        Args:
+            message: User message to send to agent
+            idempotency_key: Optional idempotency key for safe retries
+
+        Yields:
+            Text chunks from the agent response
+
+        Raises:
+            GatewayTimeoutError: If request times out
+            AgentExecutionError: If agent execution fails
+        """
+        if idempotency_key is None:
+            idempotency_key = str(uuid.uuid4())
+
+        _LOGGER.debug("Streaming agent request with key: %s", idempotency_key)
+
+        try:
+            response = await self._gateway.send_request(
+                method="agent",
+                params={
+                    "message": message,
+                    "sessionKey": self._session_key,
+                    "idempotencyKey": idempotency_key,
+                },
+                timeout=10.0,
+            )
+
+            payload = response.get("payload", {})
+            run_id = payload.get("runId")
+
+            if not run_id:
+                raise AgentExecutionError("No runId in agent response")
+
+            _LOGGER.debug("Agent run started: %s", run_id)
+
+            agent_run = AgentRun(run_id, stream=True)
+            self._agent_runs[run_id] = agent_run
+
+            try:
+                async for chunk in agent_run.iter_stream(self._timeout):
+                    yield chunk
+
+                if agent_run.status == "ok":
+                    return
+
+                if agent_run.status == "error":
+                    raise AgentExecutionError(
+                        f"Agent execution failed: {agent_run.summary}"
+                    )
+
+                raise AgentExecutionError(
+                    f"Unknown agent status: {agent_run.status}"
+                )
+
+            finally:
+                self._agent_runs.pop(run_id, None)
+
+        except GatewayTimeoutError:
+            raise
+
+        except AgentExecutionError:
+            raise
+
+        except Exception as err:
+            _LOGGER.error(
+                "Error in streaming agent request: %s", err, exc_info=True
             )
             raise AgentExecutionError(str(err)) from err
 

@@ -6,3 +6,15 @@ reconnect:
       name: Entry ID
       description: Optional entry ID to reconnect. When omitted, reconnects all entries.
       example: "abcd1234efgh5678"
+set_session:
+  name: Set Session
+  description: Switch the active Clawdbot session for one entry or all entries.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional entry ID to update. When omitted, updates all entries.
+      example: "abcd1234efgh5678"
+    session_key:
+      name: Session Key
+      description: Session key to use for new conversations.
+      example: "voice-assistant"

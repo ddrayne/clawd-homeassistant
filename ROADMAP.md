@@ -90,6 +90,24 @@ thinking_mode: "auto"   # off, low, medium, high, auto
 - "Explain", "analyze", "compare" → opus + high thinking
 - Cost tracking per model
 
+### 4. Session Management
+**Status:** Planned  
+**Complexity:** Low  
+**Impact:** Medium
+
+Dynamic session switching and multi-session support.
+
+**Features:**
+- Service to switch active session
+- Multiple conversation entities for different sessions
+- Session history access (`sessions_history`)
+- Cross-session message sending (`sessions_send`)
+
+**Use Cases:**
+- Separate work vs. personal assistant sessions
+- Family members with individual sessions
+- Context isolation (home automation vs. general queries)
+
 ## 🚀 Medium Priority Features
 
 ### 4. Memory Integration
@@ -109,25 +127,7 @@ Leverage Clawdbot's `memory_search` for context-aware responses.
 - Inject context into conversation prompt
 - Expose as optional feature (privacy considerations)
 
-### 5. Session Management
-**Status:** Planned  
-**Complexity:** Low  
-**Impact:** Medium
-
-Dynamic session switching and multi-session support.
-
-**Features:**
-- Service to switch active session
-- Multiple conversation entities for different sessions
-- Session history access (`sessions_history`)
-- Cross-session message sending (`sessions_send`)
-
-**Use Cases:**
-- Separate work vs. personal assistant sessions
-- Family members with individual sessions
-- Context isolation (home automation vs. general queries)
-
-### 6. Cron & Reminder Integration
+### 5. Cron & Reminder Integration
 **Status:** Planned  
 **Complexity:** Medium  
 **Impact:** High
@@ -283,12 +283,12 @@ Expand diagnostic data for troubleshooting.
 - [ ] Model selection
 - [ ] Thinking mode control
 - [ ] Basic usage sensors
+- [ ] Session management
+- [ ] Connection pooling
 
 ### Phase 2: Advanced Features (v1.2.0)
 - [ ] Sub-agent spawning
 - [ ] Memory integration
-- [ ] Session management
-- [ ] Connection pooling
 
 ### Phase 3: Optimization & Polish (v1.3.0)
 - [ ] Response caching

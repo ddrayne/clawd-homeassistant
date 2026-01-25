@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Any
+from typing import Any, AsyncIterator
 
 from homeassistant.components import conversation
 from homeassistant.config_entries import ConfigEntry
@@ -80,6 +80,25 @@ class ClawdConversationEntity(conversation.ConversationEntity):
         self._config_entry = config_entry
         self._gateway_client = gateway_client
         self._attr_unique_id = config_entry.entry_id
+        self._attr_supports_streaming = self._supports_streaming_result()
+
+    @staticmethod
+    def _supports_streaming_result() -> bool:
+        """Return whether the HA conversation result supports streaming."""
+        if hasattr(conversation, "StreamingConversationResult"):
+            return True
+        result_cls = getattr(conversation, "ConversationResult", None)
+        if result_cls is None:
+            return False
+        annotations = getattr(result_cls, "__annotations__", {})
+        if "response_stream" in annotations:
+            return True
+        if hasattr(result_cls, "response_stream"):
+            return True
+        slots = getattr(result_cls, "__slots__", ())
+        if isinstance(slots, str):
+            return slots == "response_stream"
+        return "response_stream" in slots
 
     @property
     def device_info(self) -> dict[str, Any]:
@@ -99,7 +118,7 @@ class ClawdConversationEntity(conversation.ConversationEntity):
             "host": data.get("host"),
             "port": data.get("port"),
             "use_ssl": data.get("use_ssl"),
-            "session_key": data.get("session_key"),
+            "session_key": self._gateway_client.session_key,
             "strip_emojis": data.get(CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS),
             "tts_max_chars": data.get(CONF_TTS_MAX_CHARS, DEFAULT_TTS_MAX_CHARS),
         }
@@ -130,31 +149,19 @@ class ClawdConversationEntity(conversation.ConversationEntity):
         user_message = user_input.text
 
         try:
-            # Send to Gateway agent
+            streaming_result = self._build_streaming_result(
+                user_input, chat_log, user_message
+            )
+            if streaming_result is not None:
+                return streaming_result
+
             response_text = await self._gateway_client.send_agent_request(
                 user_message
             )
-
-            # Add assistant response to chat log (keep emojis for display)
-            chat_log.async_add_assistant_content_without_tools(
-                conversation.AssistantContent(
-                    agent_id=user_input.agent_id,
-                    content=response_text,
-                )
-            )
-
-            # Create intent response, optionally strip emojis for TTS
             intent_response = intent.IntentResponse(language=user_input.language)
-            config = {**self._config_entry.data, **self._config_entry.options}
-            should_strip = config.get(
-                CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS
+            self._finalize_response(
+                user_input, chat_log, response_text, intent_response
             )
-            speech_text = strip_emojis(response_text) if should_strip else response_text
-            max_chars = config.get(
-                CONF_TTS_MAX_CHARS, DEFAULT_TTS_MAX_CHARS
-            )
-            speech_text = trim_tts_text(speech_text, max_chars)
-            intent_response.async_set_speech(speech_text)
 
             return conversation.ConversationResult(
                 response=intent_response,
@@ -192,6 +199,146 @@ class ClawdConversationEntity(conversation.ConversationEntity):
                 "An unexpected error occurred. Please try again.",
                 chat_log,
             )
+
+    def _build_streaming_result(
+        self,
+        user_input: conversation.ConversationInput,
+        chat_log: conversation.ChatLog,
+        user_message: str,
+    ) -> conversation.ConversationResult | None:
+        """Build a streaming conversation result when supported."""
+        if not self._supports_streaming_result():
+            return None
+
+        intent_response = intent.IntentResponse(language=user_input.language)
+        response_stream = self._stream_response(
+            user_input, chat_log, user_message, intent_response
+        )
+
+        result = conversation.ConversationResult(
+            response=intent_response,
+            conversation_id=user_input.conversation_id,
+        )
+        try:
+            setattr(result, "response_stream", response_stream)
+            return result
+        except AttributeError:
+            pass
+
+        streaming_cls = getattr(conversation, "StreamingConversationResult", None)
+        if streaming_cls is None:
+            return None
+
+        init_attempts = [
+            {
+                "response": intent_response,
+                "conversation_id": user_input.conversation_id,
+                "response_stream": response_stream,
+            },
+            {
+                "response": intent_response,
+                "conversation_id": user_input.conversation_id,
+                "stream": response_stream,
+            },
+            {
+                "response": intent_response,
+                "conversation_id": user_input.conversation_id,
+                "async_stream": response_stream,
+            },
+        ]
+        for kwargs in init_attempts:
+            try:
+                return streaming_cls(**kwargs)
+            except TypeError:
+                continue
+
+        try:
+            return streaming_cls(
+                intent_response, user_input.conversation_id, response_stream
+            )
+        except TypeError:
+            _LOGGER.debug(
+                "StreamingConversationResult signature not supported by this HA version"
+            )
+        return None
+
+    async def _stream_response(
+        self,
+        user_input: conversation.ConversationInput,
+        chat_log: conversation.ChatLog,
+        user_message: str,
+        intent_response: intent.IntentResponse,
+    ) -> AsyncIterator[str]:
+        """Stream response chunks from the Gateway."""
+        chunks: list[str] = []
+        had_content = False
+        try:
+            async for chunk in self._gateway_client.stream_agent_request(
+                user_message
+            ):
+                if chunk:
+                    chunks.append(chunk)
+                    had_content = True
+                    yield chunk
+        except GatewayConnectionError as err:
+            _LOGGER.error("Gateway connection error: %s", err)
+            if not had_content:
+                message = (
+                    "I'm having trouble connecting to the Gateway. "
+                    "Please check your configuration."
+                )
+                chunks = [message]
+                yield message
+        except GatewayTimeoutError as err:
+            _LOGGER.warning("Gateway timeout: %s", err)
+            if not had_content:
+                message = "The response took too long. Please try again."
+                chunks = [message]
+                yield message
+        except AgentExecutionError as err:
+            _LOGGER.error("Agent execution error: %s", err)
+            if not had_content:
+                message = (
+                    "I encountered an error while processing your request. "
+                    "Please try again."
+                )
+                chunks = [message]
+                yield message
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.exception("Unexpected error in streaming response")
+            if not had_content:
+                message = "An unexpected error occurred. Please try again."
+                chunks = [message]
+                yield message
+        finally:
+            response_text = "".join(chunks)
+            self._finalize_response(
+                user_input, chat_log, response_text, intent_response
+            )
+
+    def _finalize_response(
+        self,
+        user_input: conversation.ConversationInput,
+        chat_log: conversation.ChatLog,
+        response_text: str,
+        intent_response: intent.IntentResponse,
+    ) -> None:
+        """Add response to chat log and set TTS speech."""
+        chat_log.async_add_assistant_content_without_tools(
+            conversation.AssistantContent(
+                agent_id=user_input.agent_id,
+                content=response_text,
+            )
+        )
+
+        config = {**self._config_entry.data, **self._config_entry.options}
+        should_strip = config.get(CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS)
+        speech_text = (
+            strip_emojis(response_text) if should_strip else response_text
+        )
+        max_chars = config.get(CONF_TTS_MAX_CHARS, DEFAULT_TTS_MAX_CHARS)
+        speech_text = trim_tts_text(speech_text, max_chars)
+        intent_response.async_set_speech(speech_text)
 
     def _create_error_result(
         self,

@@ -1,14 +1,12 @@
 """The Clawd integration."""
 
 import logging
-from datetime import timedelta
 
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
     CONF_STRIP_EMOJIS,
@@ -28,10 +26,16 @@ from .gateway_client import ClawdGatewayClient
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.CONVERSATION]
-HEALTH_CHECK_INTERVAL = timedelta(seconds=60)
 SERVICE_RECONNECT = "reconnect"
+SERVICE_SET_SESSION = "set_session"
 _SERVICE_REGISTERED = "_service_registered"
-_SERVICE_SCHEMA = vol.Schema({vol.Optional("entry_id"): str})
+_RECONNECT_SCHEMA = vol.Schema({vol.Optional("entry_id"): str})
+_SESSION_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_SESSION_KEY): vol.All(str, vol.Length(min=1)),
+        vol.Optional("entry_id"): str,
+    }
+)
 
 _OPTION_KEYS = {
     CONF_TOKEN,
@@ -115,7 +119,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 await client.connect()
 
         hass.services.async_register(
-            DOMAIN, SERVICE_RECONNECT, _async_handle_reconnect, schema=_SERVICE_SCHEMA
+            DOMAIN, SERVICE_RECONNECT, _async_handle_reconnect, schema=_RECONNECT_SCHEMA
+        )
+
+        async def _async_handle_set_session(call) -> None:
+            entry_id = call.data.get("entry_id")
+            session_key = call.data[CONF_SESSION_KEY]
+            clients = hass.data.get(DOMAIN, {})
+
+            if entry_id:
+                target = clients.get(entry_id)
+                if not target:
+                    _LOGGER.warning(
+                        "Session update requested for unknown entry: %s",
+                        entry_id,
+                    )
+                    return
+                targets = [target]
+            else:
+                targets = [
+                    client
+                    for key, client in clients.items()
+                    if key != _SERVICE_REGISTERED
+                ]
+
+            for client in targets:
+                client.set_session_key(session_key)
+
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_SESSION,
+            _async_handle_set_session,
+            schema=_SESSION_SCHEMA,
         )
         hass.data[DOMAIN][_SERVICE_REGISTERED] = True
 
@@ -127,24 +162,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await gateway_client.disconnect()
         hass.data[DOMAIN].pop(entry.entry_id, None)
         return False
-
-    async def _health_check(_now) -> None:
-        if not gateway_client.connected:
-            _LOGGER.warning("Gateway disconnected, attempting reconnect")
-            await gateway_client.connect()
-            return
-
-        try:
-            await gateway_client.health()
-        except Exception as err:  # pylint: disable=broad-except
-            _LOGGER.warning("Gateway health check failed: %s", err)
-            await gateway_client.disconnect()
-            await gateway_client.connect()
-
-    remove_listener = async_track_time_interval(
-        hass, _health_check, HEALTH_CHECK_INTERVAL
-    )
-    entry.async_on_unload(remove_listener)
 
     # Register reload listener
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
