@@ -1,10 +1,12 @@
 """The Clawd integration."""
 
 import logging
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN, CONF_TIMEOUT, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
     CONF_SESSION_KEY,
@@ -19,6 +21,7 @@ from .gateway_client import ClawdGatewayClient
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.CONVERSATION]
+HEALTH_CHECK_INTERVAL = timedelta(seconds=60)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -53,6 +56,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Forward setup to conversation platform
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    async def _health_check(_now) -> None:
+        if not gateway_client.connected:
+            _LOGGER.warning("Gateway disconnected, attempting reconnect")
+            await gateway_client.connect()
+            return
+
+        try:
+            await gateway_client.health()
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.warning("Gateway health check failed: %s", err)
+            await gateway_client.disconnect()
+            await gateway_client.connect()
+
+    remove_listener = async_track_time_interval(
+        hass, _health_check, HEALTH_CHECK_INTERVAL
+    )
+    entry.async_on_unload(remove_listener)
 
     # Register reload listener
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
