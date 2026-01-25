@@ -111,3 +111,31 @@ def test_trim_tts_text() -> None:
     assert conversation.trim_tts_text("1234567890", 0) == "1234567890"
     assert conversation.trim_tts_text("1234567890", 3) == "123"
     assert conversation.trim_tts_text("1234567890", 6) == "123..."
+
+
+def test_error_message_added_to_chat_log() -> None:
+    conversation = _load_conversation_module()
+
+    entry = MagicMock()
+    entry.entry_id = "entry-1"
+    entry.data = {"strip_emojis": True}
+    entity = conversation.ClawdConversationEntity(entry, MagicMock())
+
+    user_input = MagicMock()
+    user_input.language = "en"
+    user_input.conversation_id = "conv-1"
+    user_input.agent_id = "agent-1"
+
+    class FakeChatLog:
+        def __init__(self) -> None:
+            self.contents = []
+
+        def async_add_assistant_content_without_tools(self, content) -> None:
+            self.contents.append(content)
+
+    chat_log = FakeChatLog()
+    result = entity._create_error_result(user_input, "Error", chat_log)
+
+    assert result.conversation_id == "conv-1"
+    assert len(chat_log.contents) == 1
+    assert chat_log.contents[0].content == "Error"

@@ -165,6 +165,7 @@ class ClawdConversationEntity(conversation.ConversationEntity):
             return self._create_error_result(
                 user_input,
                 "I'm having trouble connecting to the Gateway. Please check your configuration.",
+                chat_log,
             )
 
         except GatewayTimeoutError as err:
@@ -172,6 +173,7 @@ class ClawdConversationEntity(conversation.ConversationEntity):
             return self._create_error_result(
                 user_input,
                 "The response took too long. Please try again.",
+                chat_log,
             )
 
         except AgentExecutionError as err:
@@ -179,6 +181,7 @@ class ClawdConversationEntity(conversation.ConversationEntity):
             return self._create_error_result(
                 user_input,
                 "I encountered an error while processing your request. Please try again.",
+                chat_log,
             )
 
         except Exception as err:  # pylint: disable=broad-except
@@ -186,12 +189,23 @@ class ClawdConversationEntity(conversation.ConversationEntity):
             return self._create_error_result(
                 user_input,
                 "An unexpected error occurred. Please try again.",
+                chat_log,
             )
 
     def _create_error_result(
-        self, user_input: conversation.ConversationInput, message: str
+        self,
+        user_input: conversation.ConversationInput,
+        message: str,
+        chat_log: conversation.ChatLog | None = None,
     ) -> conversation.ConversationResult:
         """Create an error result."""
+        if chat_log is not None:
+            chat_log.async_add_assistant_content_without_tools(
+                conversation.AssistantContent(
+                    agent_id=user_input.agent_id,
+                    content=message,
+                )
+            )
         intent_response = intent.IntentResponse(language=user_input.language)
         intent_response.async_set_speech(message)
         return conversation.ConversationResult(
