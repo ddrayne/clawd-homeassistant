@@ -48,10 +48,11 @@ Plans:
   2. All constants in const.py have documented expected values
   3. Emoji stripping removes all common emoji characters while preserving normal text
   4. Emoji stripping handles edge cases (empty strings, emoji-only text, multiple consecutive emojis)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 02-01-PLAN.md - Constants and exceptions tests (UNIT-01, UNIT-02)
+- [ ] 02-02-PLAN.md - Emoji stripping tests (UNIT-03)
 
 ### Phase 3: Protocol Mocking Infrastructure
 **Goal**: Create reusable mock fixtures for GatewayProtocol and WebSocket connections that enable client layer testing
@@ -138,7 +139,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Test Infrastructure Foundation | 3/3 | Complete | 2026-01-25 |
-| 2. Simple Unit Tests | 0/0 | Not started | - |
+| 2. Simple Unit Tests | 0/2 | Planned | - |
 | 3. Protocol Mocking Infrastructure | 0/0 | Not started | - |
 | 4. Entity & Config Flow Tests | 0/0 | Not started | - |
 | 5. Protocol Layer Tests | 0/0 | Not started | - |
