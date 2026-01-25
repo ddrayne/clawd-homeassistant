@@ -25,11 +25,13 @@ This integration lets you access your **entire Clawdbot agent** - with all its s
 ### Integration Features
 - **Direct WebSocket Connection**: Real-time connection to Clawdbot Gateway
 - **Smart TTS Processing**: Configurable emoji stripping for clean text-to-speech output
+- **Voice-Friendly Limits**: Optional TTS response trimming to keep speech concise
 - **Flexible Authentication**: Secure token-based auth with SSL/TLS support
-- **Reliable Connection**: Automatic reconnection with graceful error handling
+- **Reliable Connection**: Automatic health checks, reconnects, and graceful error handling
 - **Customizable Sessions**: Route conversations to different Clawdbot sessions
 - **Fast Responses**: Typical response time of 5-10 seconds for most queries
 - **Easy Configuration**: Simple UI-based setup through Home Assistant
+- **Diagnostics Support**: Built-in diagnostics for troubleshooting
 
 ## Requirements
 
@@ -251,6 +253,13 @@ You can update the Gateway connection settings without removing the integration:
 4. Update settings as needed
 5. Click **Submit**
 
+### Reconnect Service
+
+If the Gateway connection gets stuck, you can force a reconnect:
+
+- Service: `clawd.reconnect`
+- Optional field: `entry_id` (reconnect a specific entry; omit to reconnect all)
+
 ### Session Keys
 
 The **Session Key** setting allows you to route Home Assistant conversations to specific Clawdbot sessions:
@@ -308,6 +317,13 @@ The **Strip emojis from TTS speech** option controls whether emojis are removed 
 - You're using the integration primarily through text (Assist interface) rather than voice
 
 You can change this setting anytime in **Settings** → **Devices & Services** → **Clawd** → **Configure**.
+
+### TTS Response Trimming
+
+The **TTS max characters** option caps spoken responses for long replies:
+
+- **0 (default)**: No limit
+- **> 0**: Trim TTS to the specified character count (adds "..." when trimmed)
 
 ### Multiple Gateways
 
