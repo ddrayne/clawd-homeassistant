@@ -120,7 +120,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN][_SERVICE_REGISTERED] = True
 
     # Forward setup to conversation platform
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    try:
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    except Exception:
+        _LOGGER.exception("Failed to set up conversation platform")
+        await gateway_client.disconnect()
+        hass.data[DOMAIN].pop(entry.entry_id, None)
+        return False
 
     async def _health_check(_now) -> None:
         if not gateway_client.connected:
@@ -151,10 +157,25 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.info("Unloading Clawd integration")
 
     # Get client before unloading
-    gateway_client: ClawdGatewayClient = hass.data[DOMAIN][entry.entry_id]
+    gateway_client: ClawdGatewayClient | None = (
+        hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    )
+    if gateway_client is None:
+        _LOGGER.warning(
+            "Entry not found in hass.data during unload: %s", entry.entry_id
+        )
+        return True
 
     # Unload conversation platform
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    try:
+        unload_ok = await hass.config_entries.async_unload_platforms(
+            entry, PLATFORMS
+        )
+    except ValueError:
+        _LOGGER.warning(
+            "Conversation platform was not loaded for entry: %s", entry.entry_id
+        )
+        unload_ok = True
 
     # Always disconnect and cleanup, even if unload failed
     await gateway_client.disconnect()
@@ -166,5 +187,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry."""
-    await async_unload_entry(hass, entry)
+    try:
+        await async_unload_entry(hass, entry)
+    except Exception:
+        _LOGGER.exception(
+            "Failed to unload entry during reload: %s", entry.entry_id
+        )
     await async_setup_entry(hass, entry)
