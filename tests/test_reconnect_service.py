@@ -20,8 +20,12 @@ def _load_module(name: str, path: Path):
 def _ha_available() -> bool:
     try:
         import homeassistant  # noqa: F401
+        import homeassistant.helpers.event  # noqa: F401
         return True
     except Exception:
+        for name in list(sys.modules):
+            if name == "homeassistant" or name.startswith("homeassistant."):
+                sys.modules.pop(name, None)
         return False
 
 

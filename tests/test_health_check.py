@@ -16,13 +16,14 @@ def _stub_module(name: str) -> ModuleType:
 
 
 def _ensure_ha_stubs() -> bool:
-    existing = sys.modules.get("homeassistant")
-    if existing is not None and not getattr(existing, "__file__", None):
-        sys.modules.pop("homeassistant", None)
     try:
         import homeassistant  # noqa: F401
+        import homeassistant.helpers.event  # noqa: F401
         return False
     except Exception:
+        for name in list(sys.modules):
+            if name == "homeassistant" or name.startswith("homeassistant."):
+                sys.modules.pop(name, None)
         return True
 
 
