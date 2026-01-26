@@ -276,6 +276,23 @@ If the Gateway connection gets stuck, you can force a reconnect:
 - Service: `clawd.reconnect`
 - Optional field: `entry_id` (reconnect a specific entry; omit to reconnect all)
 
+### Spawn Task Service
+
+Spawn a background agent task and handle completion via Home Assistant automations.
+
+- Service: `clawd.spawn_task`
+- Fields: `task` (required), `label` (optional), `cleanup` (`delete` or `keep`), `timeout_seconds` (optional), `entry_id` (optional)
+- Completion Event: `clawd_task_complete`
+  - Fields: `session_key`, `label`, `status`, `response`, `duration`, `model`, `usage`
+
+Example automation trigger:
+
+```yaml
+trigger:
+  - platform: event
+    event_type: clawd_task_complete
+```
+
 ### Session Keys
 
 The **Session Key** setting allows you to route Home Assistant conversations to specific Clawdbot sessions:

@@ -24,6 +24,7 @@ CONF_MODEL = "model"
 CONF_THINKING = "thinking"
 CONF_STRIP_EMOJIS = "strip_emojis"
 CONF_TTS_MAX_CHARS = "tts_max_chars"
+EVENT_TASK_COMPLETE = "clawd_task_complete"
 
 # Connection states
 STATE_CONNECTED = "connected"

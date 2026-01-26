@@ -18,3 +18,27 @@ set_session:
       name: Session Key
       description: Session key to use for new conversations.
       example: "voice-assistant"
+spawn_task:
+  name: Spawn Task
+  description: Spawn a background agent task and emit a completion event.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional entry ID to target. When omitted, spawns for all entries.
+      example: "abcd1234efgh5678"
+    task:
+      name: Task
+      description: Task description for the background agent.
+      example: "Research Edinburgh restaurants and email me a list"
+    label:
+      name: Label
+      description: Optional label to identify the task.
+      example: "restaurant-research"
+    cleanup:
+      name: Cleanup
+      description: Whether to delete or keep the spawned session.
+      example: "delete"
+    timeout_seconds:
+      name: Timeout Seconds
+      description: Optional execution timeout for the spawned task.
+      example: 300

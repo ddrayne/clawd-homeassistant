@@ -17,7 +17,7 @@ Streaming responses are supported when the Home Assistant conversation API expos
 - Falls back to buffered responses if HA doesn't support streaming
 
 ### 2. Sub-Agent Task Spawning
-**Status:** Planned  
+**Status:** Implemented  
 **Complexity:** Medium  
 **Impact:** High
 
@@ -30,11 +30,10 @@ Leverage `sessions_spawn` for background task execution.
 - Complex multi-step tasks that shouldn't block voice response
 
 **Implementation:**
-- Add `clawd.spawn_task` service
-- Accept task description, optional cleanup policy
-- Return task ID immediately
-- Set up callback mechanism for completion notifications
-- Integrate with HA notifications/automations
+- `clawd.spawn_task` service
+- Accept task description, optional cleanup policy, label, timeout
+- Polls task status and fires `clawd_task_complete` event on completion
+- Automations can react to the event to notify or act
 
 **Example Service Call:**
 ```yaml
@@ -244,7 +243,7 @@ Expand diagnostic data for troubleshooting.
 
 ## 🎯 Quick Wins (Easy Implementations)
 
-1. **`clawd.spawn_task` service** - Async task spawning (2-4 hours)
+1. **`clawd.spawn_task` service** - Async task spawning (done)
 2. **Thinking mode selector** - Config option for reasoning (done)
 3. **Model strategy** - Fast/balanced/powerful presets (2 hours)
 4. **Session selector service** - Dynamic session switching (done)
@@ -276,7 +275,7 @@ Expand diagnostic data for troubleshooting.
 - [x] Connection pooling
 
 ### Phase 2: Advanced Features (v1.2.0)
-- [ ] Sub-agent spawning
+- [x] Sub-agent spawning
 - [ ] Memory integration
 
 ### Phase 3: Optimization & Polish (v1.3.0)

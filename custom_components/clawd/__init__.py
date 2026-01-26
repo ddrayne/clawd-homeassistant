@@ -1,7 +1,9 @@
 """The Clawd integration."""
 
+import asyncio
 import inspect
 import logging
+from typing import Any
 
 import voluptuous as vol
 
@@ -25,6 +27,7 @@ from .const import (
     DEFAULT_TTS_MAX_CHARS,
     DEFAULT_USE_SSL,
     DOMAIN,
+    EVENT_TASK_COMPLETE,
 )
 from .gateway_client import ClawdGatewayClient
 
@@ -33,11 +36,21 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.CONVERSATION, Platform.SENSOR]
 SERVICE_RECONNECT = "reconnect"
 SERVICE_SET_SESSION = "set_session"
+SERVICE_SPAWN_TASK = "spawn_task"
 _SERVICE_REGISTERED = "_service_registered"
 _RECONNECT_SCHEMA = vol.Schema({vol.Optional("entry_id"): str})
 _SESSION_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_SESSION_KEY): vol.All(str, vol.Length(min=1)),
+        vol.Optional("entry_id"): str,
+    }
+)
+_SPAWN_SCHEMA = vol.Schema(
+    {
+        vol.Required("task"): vol.All(str, vol.Length(min=1)),
+        vol.Optional("label"): str,
+        vol.Optional("cleanup", default="delete"): vol.In(["delete", "keep"]),
+        vol.Optional("timeout_seconds"): vol.All(int, vol.Range(min=1, max=3600)),
         vol.Optional("entry_id"): str,
     }
 )
@@ -52,6 +65,49 @@ _OPTION_KEYS = {
     CONF_STRIP_EMOJIS,
     CONF_TTS_MAX_CHARS,
 }
+
+
+async def _async_request_json(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    method: str,
+    path: str,
+    *,
+    params: dict[str, str] | None = None,
+    json_body: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Send a JSON request to the Gateway REST API."""
+    from homeassistant.helpers import aiohttp_client
+
+    data = {**entry.data, **entry.options}
+    host = data[CONF_HOST]
+    port = data[CONF_PORT]
+    use_ssl = data.get(CONF_USE_SSL, DEFAULT_USE_SSL)
+    token = data.get(CONF_TOKEN)
+
+    scheme = "https" if use_ssl else "http"
+    url = f"{scheme}://{host}:{port}/{path.lstrip('/')}"
+    headers: dict[str, str] = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    session = aiohttp_client.async_get_clientsession(hass)
+    async with session.request(
+        method,
+        url,
+        headers=headers,
+        params=params,
+        json=json_body,
+        timeout=10,
+    ) as resp:
+        if resp.status != 200:
+            raise RuntimeError(f"Gateway request failed with status {resp.status}")
+        payload = await resp.json()
+
+    if not payload.get("ok", True):
+        raise RuntimeError(payload.get("error", "Gateway request failed"))
+
+    return payload
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -162,6 +218,164 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             SERVICE_SET_SESSION,
             _async_handle_set_session,
             schema=_SESSION_SCHEMA,
+        )
+
+        async def _async_handle_spawn_task(call) -> None:
+            entry_id = call.data.get("entry_id")
+            clients = hass.data.get(DOMAIN, {})
+            task = call.data["task"]
+            label = call.data.get("label")
+            cleanup = call.data.get("cleanup", "delete")
+            timeout_seconds = call.data.get("timeout_seconds")
+
+            if entry_id:
+                target = clients.get(entry_id)
+                if not target:
+                    _LOGGER.warning(
+                        "Spawn task requested for unknown entry: %s",
+                        entry_id,
+                    )
+                    return
+                targets = [entry_id]
+            else:
+                targets = [
+                    key
+                    for key in clients
+                    if key != _SERVICE_REGISTERED
+                ]
+
+            for target_entry_id in targets:
+                entry = hass.config_entries.async_get_entry(target_entry_id)
+                if entry is None:
+                    _LOGGER.warning(
+                        "Spawn task requested for missing entry: %s",
+                        target_entry_id,
+                    )
+                    continue
+                try:
+                    payload = await _async_request_json(
+                        hass,
+                        entry,
+                        "POST",
+                        "sessions/spawn",
+                        json_body={
+                            "task": task,
+                            "cleanup": cleanup,
+                            **({"label": label} if label else {}),
+                            **(
+                                {"timeoutSeconds": timeout_seconds}
+                                if timeout_seconds
+                                else {}
+                            ),
+                        },
+                    )
+                except Exception as err:  # pylint: disable=broad-except
+                    _LOGGER.warning(
+                        "Failed to spawn task for %s: %s",
+                        target_entry_id,
+                        err,
+                    )
+                    continue
+                payload = payload.get("payload", payload)
+                session_key = payload.get("sessionKey")
+                spawn_label = payload.get("label", label)
+                _LOGGER.info(
+                    "Spawned task %s (session: %s)",
+                    spawn_label or "task",
+                    session_key,
+                )
+
+                if not session_key:
+                    continue
+
+                async def _poll_status(
+                    poll_entry: ConfigEntry,
+                    spawn_session_key: str,
+                    spawn_label_value: str | None,
+                    max_wait: int,
+                ) -> None:
+                    start = asyncio.get_running_loop().time()
+                    while True:
+                        try:
+                            status_payload = await _async_request_json(
+                                hass,
+                                poll_entry,
+                                "GET",
+                                f"sessions/{spawn_session_key}/status",
+                            )
+                        except Exception as err:  # pylint: disable=broad-except
+                            _LOGGER.warning(
+                                "Failed to fetch spawn status for %s: %s",
+                                spawn_session_key,
+                                err,
+                            )
+                            return
+                        status_payload = status_payload.get("payload", status_payload)
+                        status = status_payload.get("status")
+                        if status and status not in ("running", "pending"):
+                            response_text = None
+                            try:
+                                history_payload = await _async_request_json(
+                                    hass,
+                                    poll_entry,
+                                    "GET",
+                                    f"sessions/{spawn_session_key}/history",
+                                    params={"limit": "1"},
+                                )
+                                history_payload = history_payload.get(
+                                    "payload", history_payload
+                                )
+                                messages = history_payload.get("messages", [])
+                                if messages:
+                                    response_text = messages[-1].get("content")
+                            except Exception as err:  # pylint: disable=broad-except
+                                _LOGGER.debug(
+                                    "Failed to fetch spawn history for %s: %s",
+                                    spawn_session_key,
+                                    err,
+                                )
+
+                            hass.bus.async_fire(
+                                EVENT_TASK_COMPLETE,
+                                {
+                                    "session_key": spawn_session_key,
+                                    "label": spawn_label_value,
+                                    "status": status,
+                                    "response": response_text,
+                                    "duration": status_payload.get("duration"),
+                                    "model": status_payload.get("model"),
+                                    "usage": status_payload.get("usage"),
+                                },
+                            )
+                            return
+
+                        if asyncio.get_running_loop().time() - start >= max_wait:
+                            hass.bus.async_fire(
+                                EVENT_TASK_COMPLETE,
+                                {
+                                    "session_key": spawn_session_key,
+                                    "label": spawn_label_value,
+                                    "status": "timeout",
+                                    "response": None,
+                                    "duration": status_payload.get("duration"),
+                                    "model": status_payload.get("model"),
+                                    "usage": status_payload.get("usage"),
+                                },
+                            )
+                            return
+
+                        await asyncio.sleep(5)
+
+                max_wait = timeout_seconds or 3600
+                hass.async_create_task(
+                    _poll_status(entry, session_key, spawn_label, max_wait)
+                )
+
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SPAWN_TASK,
+            _async_handle_spawn_task,
+            schema=_SPAWN_SCHEMA,
         )
         hass.data[DOMAIN][_SERVICE_REGISTERED] = True
 
