@@ -28,8 +28,12 @@ This integration lets you access your **entire Clawdbot agent** - with all its s
 - **Voice-Friendly Limits**: Optional TTS response trimming to keep speech concise
 - **Flexible Authentication**: Secure token-based auth with SSL/TLS support
 - **Reliable Connection**: Keepalive pings, automatic reconnects, and graceful error handling
-- **Customizable Sessions**: Route conversations to different Clawdbot sessions and switch sessions via service
+- **Customizable Sessions**: Session selector in setup plus `clawd.set_session` for fast switching
+- **Model & Thinking Overrides**: Per-request model and reasoning mode controls
 - **Streaming Responses**: Stream output when Home Assistant supports streaming conversation results
+- **Usage Sensors**: Token usage, estimated cost, and message count sensors
+- **Background Tasks**: `clawd.spawn_task` with `clawd_task_complete` event for automations
+- **Cron Scheduling**: `clawd.cron_add`, `clawd.cron_remove`, `clawd.cron_run` services for scheduled tasks
 - **Fast Responses**: Typical response time of 5-10 seconds for most queries
 - **Easy Configuration**: Simple UI-based setup through Home Assistant
 - **Diagnostics Support**: Built-in diagnostics for troubleshooting
