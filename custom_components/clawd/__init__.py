@@ -44,6 +44,7 @@ SERVICE_CRON_ADD = "cron_add"
 SERVICE_CRON_REMOVE = "cron_remove"
 SERVICE_CRON_RUN = "cron_run"
 _SERVICE_REGISTERED = "_service_registered"
+_PLATFORMS_LOADED = "_platforms_loaded"
 _RECONNECT_SCHEMA = vol.Schema({vol.Optional("entry_id"): str})
 _SESSION_SCHEMA = vol.Schema(
     {
@@ -219,7 +220,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 targets = [
                     client
                     for key, client in clients.items()
-                    if key != _SERVICE_REGISTERED
+                    if key not in (_SERVICE_REGISTERED, _PLATFORMS_LOADED)
                 ]
 
             for client in targets:
@@ -248,7 +249,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 targets = [
                     client
                     for key, client in clients.items()
-                    if key != _SERVICE_REGISTERED
+                    if key not in (_SERVICE_REGISTERED, _PLATFORMS_LOADED)
                 ]
 
             for client in targets:
@@ -282,7 +283,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 targets = [
                     key
                     for key in clients
-                    if key != _SERVICE_REGISTERED
+                    if key not in (_SERVICE_REGISTERED, _PLATFORMS_LOADED)
                 ]
 
             for target_entry_id in targets:
@@ -540,14 +541,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         hass.data[DOMAIN][_SERVICE_REGISTERED] = True
 
-    # Forward setup to conversation platform
-    try:
-        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    except Exception:
-        _LOGGER.exception("Failed to set up conversation platform")
-        await gateway_client.disconnect()
-        hass.data[DOMAIN].pop(entry.entry_id, None)
-        return False
+    # Forward setup to platforms (guard against duplicate setup attempts)
+    platforms_loaded = hass.data[DOMAIN].setdefault(_PLATFORMS_LOADED, set())
+    if entry.entry_id not in platforms_loaded:
+        try:
+            await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        except Exception:
+            _LOGGER.exception("Failed to set up platforms")
+            await gateway_client.disconnect()
+            hass.data[DOMAIN].pop(entry.entry_id, None)
+            return False
+        platforms_loaded.add(entry.entry_id)
 
     # Register reload listener
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
@@ -568,19 +572,25 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "Entry not found in hass.data during unload: %s", entry.entry_id
         )
 
-    # Unload conversation platform even if the client was already cleared.
-    try:
-        unload_result = hass.config_entries.async_unload_platforms(
-            entry, PLATFORMS
-        )
-        if inspect.isawaitable(unload_result):
-            unload_ok = await unload_result
-        else:
-            unload_ok = bool(unload_result) if unload_result is not None else True
-    except ValueError:
-        _LOGGER.warning(
-            "Conversation platform was not loaded for entry: %s", entry.entry_id
-        )
+    # Unload platforms only if they were loaded.
+    platforms_loaded = hass.data.get(DOMAIN, {}).get(_PLATFORMS_LOADED, set())
+    if entry.entry_id in platforms_loaded:
+        try:
+            unload_result = hass.config_entries.async_unload_platforms(
+                entry, PLATFORMS
+            )
+            if inspect.isawaitable(unload_result):
+                unload_ok = await unload_result
+            else:
+                unload_ok = bool(unload_result) if unload_result is not None else True
+        except ValueError:
+            _LOGGER.warning(
+                "Conversation platform was not loaded for entry: %s", entry.entry_id
+            )
+            unload_ok = True
+        if unload_ok:
+            platforms_loaded.discard(entry.entry_id)
+    else:
         unload_ok = True
 
     # Always disconnect and cleanup, even if unload failed

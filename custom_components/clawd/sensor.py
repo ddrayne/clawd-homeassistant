@@ -89,7 +89,10 @@ async def async_setup_entry(
         update_method=_async_update,
         update_interval=_UPDATE_INTERVAL,
     )
-    await coordinator.async_config_entry_first_refresh()
+    try:
+        await coordinator.async_refresh()
+    except Exception as err:  # pragma: no cover - best effort startup
+        _LOGGER.warning("Session status refresh failed: %s", err)
 
     sensors = [
         ClawdSessionSensor(
