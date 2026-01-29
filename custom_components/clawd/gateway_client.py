@@ -8,6 +8,7 @@ from typing import Any, AsyncIterator
 
 from .exceptions import (
     AgentExecutionError,
+    GatewayConnectionError,
     GatewayTimeoutError,
 )
 from .gateway import GatewayProtocol
@@ -267,7 +268,7 @@ class ClawdGatewayClient:
                 # Clean up run tracker
                 self._agent_runs.pop(run_id, None)
 
-        except GatewayTimeoutError:
+        except (GatewayConnectionError, GatewayTimeoutError):
             raise
 
         except AgentExecutionError:
@@ -348,7 +349,7 @@ class ClawdGatewayClient:
             finally:
                 self._agent_runs.pop(run_id, None)
 
-        except GatewayTimeoutError:
+        except (GatewayConnectionError, GatewayTimeoutError):
             raise
 
         except AgentExecutionError:
