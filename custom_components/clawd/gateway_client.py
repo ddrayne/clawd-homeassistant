@@ -8,8 +8,10 @@ from typing import Any, AsyncIterator
 
 from .exceptions import (
     AgentExecutionError,
+    GatewayAuthenticationError,
     GatewayConnectionError,
     GatewayTimeoutError,
+    ProtocolError,
 )
 from .gateway import GatewayProtocol
 
@@ -129,8 +131,18 @@ class ClawdGatewayClient:
         # Register event handler
         self._gateway.on_event("agent", self._handle_agent_event)
 
+    @property
+    def fatal_error(self) -> Exception | None:
+        """Return the fatal error that stopped the gateway connection, if any."""
+        return self._gateway._fatal_error
+
     async def connect(self) -> None:
-        """Connect to Gateway."""
+        """Connect to Gateway.
+
+        Raises:
+            GatewayAuthenticationError: If authentication fails.
+            GatewayConnectionError: If connection fails or times out.
+        """
         await self._gateway.connect()
 
         # Wait for connection to be established (event-based, no polling)
@@ -139,19 +151,17 @@ class ClawdGatewayClient:
                 self._gateway._connected_event.wait(), timeout=5.0
             )
         except asyncio.TimeoutError:
-            if self._gateway._fatal_error:
-                # Auth/protocol failure already logged with details by gateway
-                _LOGGER.debug(
-                    "Connection failed due to: %s",
-                    self._gateway._fatal_error,
-                )
-            else:
-                _LOGGER.warning(
-                    "Connection timeout - Gateway at %s:%s may not be "
-                    "reachable. Check that the gateway is running",
-                    self._gateway._host,
-                    self._gateway._port,
-                )
+            fatal = self._gateway._fatal_error
+            if isinstance(fatal, GatewayAuthenticationError):
+                raise fatal
+            if isinstance(fatal, ProtocolError):
+                raise GatewayConnectionError(str(fatal)) from fatal
+            if fatal:
+                raise GatewayConnectionError(str(fatal)) from fatal
+            raise GatewayConnectionError(
+                f"Connection timeout - Gateway at {self._gateway._host}:"
+                f"{self._gateway._port} may not be reachable"
+            )
 
     async def disconnect(self) -> None:
         """Disconnect from Gateway."""

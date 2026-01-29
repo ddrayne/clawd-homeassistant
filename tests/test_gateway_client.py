@@ -31,8 +31,10 @@ _gateway_client = _load_module(
 )
 
 AgentExecutionError = _exceptions.AgentExecutionError
+GatewayAuthenticationError = _exceptions.GatewayAuthenticationError
 GatewayConnectionError = _exceptions.GatewayConnectionError
 GatewayTimeoutError = _exceptions.GatewayTimeoutError
+ProtocolError = _exceptions.ProtocolError
 AgentRun = _gateway_client.AgentRun
 ClawdGatewayClient = _gateway_client.ClawdGatewayClient
 
@@ -254,3 +256,42 @@ class TestStreamAgentRequest:
             await consume()
 
         assert client._agent_runs == {}
+
+
+class TestConnect:
+    @pytest.mark.asyncio
+    async def test_connect_raises_on_auth_error(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, "bad-token")
+        auth_err = GatewayAuthenticationError("bad token")
+        client._gateway._fatal_error = auth_err
+        client._gateway.connect = AsyncMock()  # type: ignore[attr-defined]
+        # _connected_event never set, so wait_for will time out
+
+        with pytest.raises(GatewayAuthenticationError):
+            await client.connect()
+
+    @pytest.mark.asyncio
+    async def test_connect_raises_on_protocol_error(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, None)
+        client._gateway._fatal_error = ProtocolError("version mismatch")
+        client._gateway.connect = AsyncMock()  # type: ignore[attr-defined]
+
+        with pytest.raises(GatewayConnectionError, match="version mismatch"):
+            await client.connect()
+
+    @pytest.mark.asyncio
+    async def test_connect_raises_timeout_when_no_fatal_error(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, None)
+        client._gateway.connect = AsyncMock()  # type: ignore[attr-defined]
+        # No fatal error, event never set
+
+        with pytest.raises(GatewayConnectionError, match="Connection timeout"):
+            await client.connect()
+
+    def test_fatal_error_property(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, None)
+        assert client.fatal_error is None
+
+        err = GatewayAuthenticationError("bad token")
+        client._gateway._fatal_error = err
+        assert client.fatal_error is err

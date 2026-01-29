@@ -23,14 +23,19 @@ async def test_spawn_task_service_registered() -> None:
     config_entries_mod = ModuleType("homeassistant.config_entries")
     const_mod = ModuleType("homeassistant.const")
     core_mod = ModuleType("homeassistant.core")
+    exceptions_mod = ModuleType("homeassistant.exceptions")
     event_mod = ModuleType("homeassistant.helpers.event")
+    issue_mod = ModuleType("homeassistant.helpers.issue_registry")
     sys.modules["homeassistant.config_entries"] = config_entries_mod
     sys.modules["homeassistant.const"] = const_mod
     sys.modules["homeassistant.core"] = core_mod
+    sys.modules["homeassistant.exceptions"] = exceptions_mod
     sys.modules["homeassistant.helpers.event"] = event_mod
+    sys.modules["homeassistant.helpers.issue_registry"] = issue_mod
     sys.modules.setdefault("homeassistant.helpers", ModuleType("homeassistant.helpers"))
 
     class Platform:
+        BINARY_SENSOR = "binary_sensor"
         CONVERSATION = "conversation"
         SENSOR = "sensor"
 
@@ -40,13 +45,19 @@ async def test_spawn_task_service_registered() -> None:
     const_mod.Platform = Platform
     config_entries_mod.ConfigEntry = object
     core_mod.HomeAssistant = object
+    exceptions_mod.ConfigEntryAuthFailed = type("ConfigEntryAuthFailed", (Exception,), {})
+    exceptions_mod.ConfigEntryNotReady = type("ConfigEntryNotReady", (Exception,), {})
     event_mod.async_track_time_interval = lambda *args, **kwargs: None
+    issue_mod.IssueSeverity = type("IssueSeverity", (), {"ERROR": "error"})()
+    issue_mod.async_create_issue = lambda *args, **kwargs: None
+    issue_mod.async_delete_issue = lambda *args, **kwargs: None
 
     base = Path(__file__).parent.parent / "custom_components" / "clawd"
     sys.modules.setdefault("custom_components", ModuleType("custom_components"))
     sys.modules.setdefault("custom_components.clawd", ModuleType("custom_components.clawd"))
 
     _load_module("custom_components.clawd.const", base / "const.py")
+    _load_module("custom_components.clawd.exceptions", base / "exceptions.py")
 
     gateway_client_mod = ModuleType("custom_components.clawd.gateway_client")
     sys.modules["custom_components.clawd.gateway_client"] = gateway_client_mod
@@ -56,6 +67,7 @@ async def test_spawn_task_service_registered() -> None:
             self.disconnect = AsyncMock()
             self.connect = AsyncMock()
             self.connected = True
+            self._gateway = MagicMock()
 
     gateway_client_mod.ClawdGatewayClient = ClawdGatewayClient
 

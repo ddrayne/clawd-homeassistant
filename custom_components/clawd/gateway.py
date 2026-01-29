@@ -62,6 +62,7 @@ class GatewayProtocol:
 
         # Fatal error that stopped the connection loop (auth / protocol)
         self._fatal_error: Exception | None = None
+        self._on_fatal_error: Callable[[Exception], None] | None = None
 
         # Build WebSocket URI
         protocol = "wss" if use_ssl else "ws"
@@ -158,6 +159,8 @@ class GatewayProtocol:
                             "Detail: %s",
                             err,
                         )
+                        if self._on_fatal_error:
+                            self._on_fatal_error(err)
                         # Return instead of raise: re-raising inside
                         # the websockets context manager allows
                         # __aexit__ to replace the exception with
@@ -174,6 +177,8 @@ class GatewayProtocol:
                             "Detail: %s",
                             err,
                         )
+                        if self._on_fatal_error:
+                            self._on_fatal_error(err)
                         return
 
                     finally:
@@ -202,6 +207,8 @@ class GatewayProtocol:
                 if not self._fatal_error:
                     self._fatal_error = err
                     _LOGGER.error("Gateway connection stopped: %s", err)
+                    if self._on_fatal_error:
+                        self._on_fatal_error(err)
                 break
 
             except ConnectionClosedError as err:

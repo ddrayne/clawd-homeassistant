@@ -19,6 +19,7 @@ from .const import (
 )
 from .exceptions import (
     AgentExecutionError,
+    GatewayAuthenticationError,
     GatewayConnectionError,
     GatewayTimeoutError,
 )
@@ -128,6 +129,8 @@ class ClawdConversationEntity(conversation.ConversationEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
+        if isinstance(self._gateway_client.fatal_error, GatewayAuthenticationError):
+            return False
         return self._gateway_client.connected
 
     @property
@@ -168,6 +171,15 @@ class ClawdConversationEntity(conversation.ConversationEntity):
             return conversation.ConversationResult(
                 response=intent_response,
                 conversation_id=user_input.conversation_id,
+            )
+
+        except GatewayAuthenticationError as err:
+            _LOGGER.error("Gateway authentication error: %s", err)
+            return self._create_error_result(
+                user_input,
+                "The gateway token is no longer valid. Please update it in "
+                "Settings, Devices and Services, Clawd, Configure.",
+                chat_log,
             )
 
         except GatewayConnectionError as err:
@@ -282,6 +294,15 @@ class ClawdConversationEntity(conversation.ConversationEntity):
                     chunks.append(chunk)
                     had_content = True
                     yield chunk
+        except GatewayAuthenticationError as err:
+            _LOGGER.error("Gateway authentication error: %s", err)
+            if not had_content:
+                message = (
+                    "The gateway token is no longer valid. Please update it in "
+                    "Settings, Devices and Services, Clawd, Configure."
+                )
+                chunks = [message]
+                yield message
         except GatewayConnectionError as err:
             _LOGGER.error("Gateway connection error: %s", err)
             if not had_content:

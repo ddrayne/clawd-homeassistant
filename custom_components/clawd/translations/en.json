@@ -22,6 +22,16 @@
           "strip_emojis": "Strip emojis from TTS speech",
           "tts_max_chars": "TTS max characters (0 = no limit)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Clawd Gateway",
+        "description": "The gateway token is no longer valid. Please update your connection settings.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "Gateway Token",
+          "use_ssl": "Use SSL (wss://)"
+        }
       }
     },
     "error": {
@@ -31,7 +41,8 @@
       "unknown": "Unexpected error occurred"
     },
     "abort": {
-      "already_configured": "Gateway is already configured"
+      "already_configured": "Gateway is already configured",
+      "reauth_successful": "Re-authentication successful"
     }
   },
   "options": {
@@ -52,6 +63,12 @@
           "tts_max_chars": "TTS max characters (0 = no limit)"
         }
       }
+    }
+  },
+  "issues": {
+    "gateway_auth_failed": {
+      "title": "Gateway authentication failed",
+      "description": "The Clawd Gateway token is no longer valid. Update your token in Settings > Devices & Services > Clawd > Configure."
     }
   }
 }

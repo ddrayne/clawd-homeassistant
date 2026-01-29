@@ -10,6 +10,8 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue, async_delete_issue
 
 from .const import (
     CONF_MODEL,
@@ -32,11 +34,16 @@ from .const import (
     EVENT_CRON_RUN,
     EVENT_TASK_COMPLETE,
 )
+from .exceptions import (
+    GatewayAuthenticationError,
+    GatewayConnectionError,
+    GatewayTimeoutError,
+)
 from .gateway_client import ClawdGatewayClient
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.CONVERSATION, Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.CONVERSATION, Platform.SENSOR]
 SERVICE_RECONNECT = "reconnect"
 SERVICE_SET_SESSION = "set_session"
 SERVICE_SPAWN_TASK = "spawn_task"
@@ -197,9 +204,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.data[CONF_HOST],
             entry.data[CONF_PORT],
         )
+    except GatewayAuthenticationError as err:
+        raise ConfigEntryAuthFailed(err) from err
+    except (GatewayConnectionError, GatewayTimeoutError) as err:
+        raise ConfigEntryNotReady(err) from err
     except Exception as err:
-        _LOGGER.error("Failed to connect to Gateway: %s", err)
-        return False
+        raise ConfigEntryNotReady(err) from err
+
+    # Register runtime fatal error callback for repair issues
+    def _on_fatal_error(err: Exception) -> None:
+        if isinstance(err, GatewayAuthenticationError):
+            async_create_issue(
+                hass,
+                DOMAIN,
+                "gateway_auth_failed",
+                is_fixable=False,
+                severity=IssueSeverity.ERROR,
+                translation_key="gateway_auth_failed",
+            )
+
+    gateway_client._gateway._on_fatal_error = _on_fatal_error
+
+    # Clear any stale repair issue from a previous session
+    async_delete_issue(hass, DOMAIN, "gateway_auth_failed")
 
     # Store client in hass.data
     hass.data.setdefault(DOMAIN, {})

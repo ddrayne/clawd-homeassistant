@@ -83,6 +83,8 @@ async def async_setup_entry(
 
     async def _async_update() -> dict[str, Any]:
         client = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+        if client and not client.connected:
+            raise UpdateFailed("Gateway not connected")
         active_session_key = session_key
         if client and getattr(client, "session_key", None):
             active_session_key = client.session_key

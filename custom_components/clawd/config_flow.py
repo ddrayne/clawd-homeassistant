@@ -254,6 +254,72 @@ class ClawdConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="session", data_schema=data_schema, errors=errors
         )
 
+    async def async_step_reauth(
+        self, entry_data: dict[str, Any]
+    ) -> FlowResult:
+        """Handle re-authentication when the gateway token becomes invalid."""
+        self._reauth_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle re-auth confirmation form."""
+        errors: dict[str, str] = {}
+        assert self._reauth_entry is not None
+        existing = {**self._reauth_entry.data, **self._reauth_entry.options}
+
+        if user_input is not None:
+            # Merge existing data with new user input for validation
+            test_data = {**existing, **user_input}
+            try:
+                await validate_connection(self.hass, test_data)
+            except GatewayAuthenticationError:
+                errors["base"] = "invalid_auth"
+            except GatewayTimeoutError:
+                errors["base"] = "timeout"
+            except GatewayConnectionError:
+                errors["base"] = "cannot_connect"
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception during reauth")
+                errors["base"] = "unknown"
+            else:
+                self.hass.config_entries.async_update_entry(
+                    self._reauth_entry,
+                    data={**self._reauth_entry.data, **user_input},
+                    options={**self._reauth_entry.options, **user_input},
+                )
+                await self.hass.config_entries.async_reload(
+                    self._reauth_entry.entry_id
+                )
+                return self.async_abort(reason="reauth_successful")
+
+        data_schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_HOST, default=existing.get(CONF_HOST, DEFAULT_HOST)
+                ): str,
+                vol.Required(
+                    CONF_PORT, default=existing.get(CONF_PORT, DEFAULT_PORT)
+                ): vol.All(int, vol.Range(min=1, max=65535)),
+                vol.Optional(
+                    CONF_TOKEN, default=existing.get(CONF_TOKEN)
+                ): str,
+                vol.Optional(
+                    CONF_USE_SSL,
+                    default=existing.get(CONF_USE_SSL, DEFAULT_USE_SSL),
+                ): bool,
+            }
+        )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=data_schema,
+            errors=errors,
+        )
+
     @staticmethod
     @callback
     def async_get_options_flow(
