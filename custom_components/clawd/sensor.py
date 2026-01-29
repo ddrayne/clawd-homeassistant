@@ -16,7 +16,7 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
 )
-from aiohttp import ContentTypeError
+from aiohttp import ClientTimeout, ContentTypeError
 
 from .const import (
     CONF_SESSION_KEY,
@@ -48,7 +48,9 @@ async def _async_fetch_session_status(
         headers["Authorization"] = f"Bearer {token}"
 
     session = aiohttp_client.async_get_clientsession(hass)
-    async with session.get(url, headers=headers, timeout=10) as resp:
+    async with session.get(
+        url, headers=headers, timeout=ClientTimeout(total=10)
+    ) as resp:
         if resp.status != 200:
             raise UpdateFailed(
                 f"Session status request failed with status {resp.status}"
@@ -137,7 +139,7 @@ def _value_from_usage(key: str):
     """Build a getter for a usage field."""
 
     def _getter(data: dict[str, Any]) -> int | float | None:
-        usage = data.get("usage", {})
+        usage = data.get("usage") or {}
         return usage.get(key)
 
     return _getter

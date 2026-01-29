@@ -31,6 +31,7 @@ _gateway_client = _load_module(
 )
 
 AgentExecutionError = _exceptions.AgentExecutionError
+GatewayConnectionError = _exceptions.GatewayConnectionError
 GatewayTimeoutError = _exceptions.GatewayTimeoutError
 AgentRun = _gateway_client.AgentRun
 ClawdGatewayClient = _gateway_client.ClawdGatewayClient
@@ -83,6 +84,16 @@ class TestHandleAgentEvent:
 
 
 class TestSendAgentRequest:
+    @pytest.mark.asyncio
+    async def test_connection_error_propagates(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, None)
+        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
+            side_effect=GatewayConnectionError("Not connected to Gateway"),
+        )
+
+        with pytest.raises(GatewayConnectionError):
+            await client.send_agent_request("hello")
+
     @pytest.mark.asyncio
     async def test_missing_run_id_raises(self) -> None:
         client = ClawdGatewayClient("localhost", 1, None)
@@ -172,6 +183,20 @@ class TestSendAgentRequest:
 
 
 class TestStreamAgentRequest:
+    @pytest.mark.asyncio
+    async def test_connection_error_propagates(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, None)
+        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
+            side_effect=GatewayConnectionError("Not connected to Gateway"),
+        )
+
+        async def consume():
+            async for _ in client.stream_agent_request("hello"):
+                pass
+
+        with pytest.raises(GatewayConnectionError):
+            await consume()
+
     @pytest.mark.asyncio
     async def test_streams_chunks_and_cleans_up(self) -> None:
         client = ClawdGatewayClient("localhost", 1, None)

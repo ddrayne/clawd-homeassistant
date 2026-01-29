@@ -4,6 +4,7 @@ import asyncio
 import logging
 from typing import Any
 
+from aiohttp import ClientTimeout
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -80,7 +81,9 @@ async def _async_fetch_sessions(
 
     session = aiohttp_client.async_get_clientsession(hass)
     try:
-        async with session.get(url, headers=headers, timeout=10) as resp:
+        async with session.get(
+            url, headers=headers, timeout=ClientTimeout(total=10)
+        ) as resp:
             if resp.status != 200:
                 _LOGGER.debug(
                     "Session list request failed with status %s", resp.status
