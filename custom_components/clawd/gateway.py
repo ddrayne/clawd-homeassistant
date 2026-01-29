@@ -103,6 +103,7 @@ class GatewayProtocol:
                 await self._connect_task
             except asyncio.CancelledError:
                 pass
+            self._connect_task = None
 
         # Close websocket
         if self._websocket:
@@ -149,7 +150,17 @@ class GatewayProtocol:
                         ProtocolError,
                     ) as err:
                         _LOGGER.error("Gateway error: %s", err)
-                        raise
+                        _LOGGER.error(
+                            "Fatal error - authentication or protocol "
+                            "issue. Stopping connection attempts."
+                        )
+                        # Return instead of raise: re-raising inside
+                        # the websockets context manager allows
+                        # __aexit__ to replace the exception with
+                        # ConnectionClosedError, which the outer loop
+                        # treats as transient, creating an infinite
+                        # retry loop.
+                        return
 
                     finally:
                         self._connected = False
