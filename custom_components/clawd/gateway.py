@@ -60,6 +60,12 @@ class GatewayProtocol:
         # Event handlers
         self._event_handlers: dict[str, list[Callable]] = {}
 
+        # Snapshot from the connect handshake response
+        self._connect_snapshot: dict[str, Any] = {}
+
+        # Presence data from WS events (seeded from snapshot)
+        self._presence: dict[str, Any] = {}
+
         # Fatal error that stopped the connection loop (auth / protocol)
         self._fatal_error: Exception | None = None
         self._on_fatal_error: Callable[[Exception], None] | None = None
@@ -72,6 +78,16 @@ class GatewayProtocol:
     def connected(self) -> bool:
         """Return whether the connection is established."""
         return self._connected
+
+    @property
+    def connect_snapshot(self) -> dict[str, Any]:
+        """Return the snapshot received during the connect handshake."""
+        return self._connect_snapshot
+
+    @property
+    def presence(self) -> dict[str, Any]:
+        """Return the latest presence data."""
+        return self._presence
 
     async def connect(self) -> None:
         """Connect to the Gateway and perform handshake."""
@@ -328,6 +344,12 @@ class GatewayProtocol:
                     )
                 raise ProtocolError(f"Connection failed: {error_msg}")
 
+            self._connect_snapshot = response.get("payload", {})
+            self._presence = (
+                self._connect_snapshot
+                .get("snapshot", {})
+                .get("presence", {})
+            )
             _LOGGER.debug("Handshake completed successfully")
 
         except asyncio.TimeoutError as err:

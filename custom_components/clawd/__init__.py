@@ -1,9 +1,7 @@
 """The Clawd integration."""
 
-import asyncio
 import inspect
 import logging
-from typing import Any
 
 import voluptuous as vol
 
@@ -29,10 +27,6 @@ from .const import (
     DEFAULT_TTS_MAX_CHARS,
     DEFAULT_USE_SSL,
     DOMAIN,
-    EVENT_CRON_ADDED,
-    EVENT_CRON_REMOVED,
-    EVENT_CRON_RUN,
-    EVENT_TASK_COMPLETE,
 )
 from .exceptions import (
     GatewayAuthenticationError,
@@ -46,43 +40,12 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.CONVERSATION, Platform.SENSOR]
 SERVICE_RECONNECT = "reconnect"
 SERVICE_SET_SESSION = "set_session"
-SERVICE_SPAWN_TASK = "spawn_task"
-SERVICE_CRON_ADD = "cron_add"
-SERVICE_CRON_REMOVE = "cron_remove"
-SERVICE_CRON_RUN = "cron_run"
 _SERVICE_REGISTERED = "_service_registered"
 _PLATFORMS_LOADED = "_platforms_loaded"
 _RECONNECT_SCHEMA = vol.Schema({vol.Optional("entry_id"): str})
 _SESSION_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_SESSION_KEY): vol.All(str, vol.Length(min=1)),
-        vol.Optional("entry_id"): str,
-    }
-)
-_SPAWN_SCHEMA = vol.Schema(
-    {
-        vol.Required("task"): vol.All(str, vol.Length(min=1)),
-        vol.Optional("label"): str,
-        vol.Optional("cleanup", default="delete"): vol.In(["delete", "keep"]),
-        vol.Optional("timeout_seconds"): vol.All(int, vol.Range(min=1, max=3600)),
-        vol.Optional("entry_id"): str,
-    }
-)
-_CRON_ADD_SCHEMA = vol.Schema(
-    {
-        vol.Required("schedule"): vol.All(str, vol.Length(min=1)),
-        vol.Required("text"): vol.All(str, vol.Length(min=1)),
-        vol.Optional("context_messages"): vol.All(int, vol.Range(min=0, max=10)),
-        vol.Optional("entry_id"): str,
-    }
-)
-_CRON_REMOVE_SCHEMA = vol.Schema(
-    {vol.Required("job_id"): vol.All(str, vol.Length(min=1)), vol.Optional("entry_id"): str}
-)
-_CRON_RUN_SCHEMA = vol.Schema(
-    {
-        vol.Required("job_id"): vol.All(str, vol.Length(min=1)),
-        vol.Optional("mode", default="now"): vol.In(["now"]),
         vol.Optional("entry_id"): str,
     }
 )
@@ -97,66 +60,6 @@ _OPTION_KEYS = {
     CONF_STRIP_EMOJIS,
     CONF_TTS_MAX_CHARS,
 }
-
-
-async def _async_request_json(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
-    method: str,
-    path: str,
-    *,
-    params: dict[str, str] | None = None,
-    json_body: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Send a JSON request to the Gateway REST API."""
-    from homeassistant.helpers import aiohttp_client
-
-    data = {**entry.data, **entry.options}
-    host = data[CONF_HOST]
-    port = data[CONF_PORT]
-    use_ssl = data.get(CONF_USE_SSL, DEFAULT_USE_SSL)
-    token = data.get(CONF_TOKEN)
-
-    scheme = "https" if use_ssl else "http"
-    url = f"{scheme}://{host}:{port}/{path.lstrip('/')}"
-    headers: dict[str, str] = {}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
-    session = aiohttp_client.async_get_clientsession(hass)
-    async with session.request(
-        method,
-        url,
-        headers=headers,
-        params=params,
-        json=json_body,
-        timeout=10,
-    ) as resp:
-        if resp.status != 200:
-            raise RuntimeError(f"Gateway request failed with status {resp.status}")
-        payload = await resp.json()
-
-    if not payload.get("ok", True):
-        raise RuntimeError(payload.get("error", "Gateway request failed"))
-
-    return payload
-
-
-async def _async_iter_target_entries(
-    hass: HomeAssistant, entry_id: str | None
-) -> list[ConfigEntry]:
-    """Resolve target config entries."""
-    if entry_id:
-        entry = hass.config_entries.async_get_entry(entry_id)
-        if entry is None:
-            _LOGGER.warning("Requested entry not found: %s", entry_id)
-            return []
-        return [entry]
-    return [
-        entry
-        for entry in hass.config_entries.async_entries(DOMAIN)
-        if entry.entry_id in hass.data.get(DOMAIN, {})
-    ]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -287,284 +190,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             SERVICE_SET_SESSION,
             _async_handle_set_session,
             schema=_SESSION_SCHEMA,
-        )
-
-        async def _async_handle_spawn_task(call) -> None:
-            entry_id = call.data.get("entry_id")
-            clients = hass.data.get(DOMAIN, {})
-            task = call.data["task"]
-            label = call.data.get("label")
-            cleanup = call.data.get("cleanup", "delete")
-            timeout_seconds = call.data.get("timeout_seconds")
-
-            if entry_id:
-                target = clients.get(entry_id)
-                if not target:
-                    _LOGGER.warning(
-                        "Spawn task requested for unknown entry: %s",
-                        entry_id,
-                    )
-                    return
-                targets = [entry_id]
-            else:
-                targets = [
-                    key
-                    for key in clients
-                    if key not in (_SERVICE_REGISTERED, _PLATFORMS_LOADED)
-                ]
-
-            for target_entry_id in targets:
-                entry = hass.config_entries.async_get_entry(target_entry_id)
-                if entry is None:
-                    _LOGGER.warning(
-                        "Spawn task requested for missing entry: %s",
-                        target_entry_id,
-                    )
-                    continue
-                try:
-                    payload = await _async_request_json(
-                        hass,
-                        entry,
-                        "POST",
-                        "sessions/spawn",
-                        json_body={
-                            "task": task,
-                            "cleanup": cleanup,
-                            **({"label": label} if label else {}),
-                            **(
-                                {"timeoutSeconds": timeout_seconds}
-                                if timeout_seconds
-                                else {}
-                            ),
-                        },
-                    )
-                except Exception as err:  # pylint: disable=broad-except
-                    _LOGGER.warning(
-                        "Failed to spawn task for %s: %s",
-                        target_entry_id,
-                        err,
-                    )
-                    continue
-                payload = payload.get("payload", payload)
-                session_key = payload.get("sessionKey")
-                spawn_label = payload.get("label", label)
-                _LOGGER.info(
-                    "Spawned task %s (session: %s)",
-                    spawn_label or "task",
-                    session_key,
-                )
-
-                if not session_key:
-                    continue
-
-                async def _poll_status(
-                    poll_entry: ConfigEntry,
-                    spawn_session_key: str,
-                    spawn_label_value: str | None,
-                    max_wait: int,
-                ) -> None:
-                    start = asyncio.get_running_loop().time()
-                    while True:
-                        try:
-                            status_payload = await _async_request_json(
-                                hass,
-                                poll_entry,
-                                "GET",
-                                f"sessions/{spawn_session_key}/status",
-                            )
-                        except Exception as err:  # pylint: disable=broad-except
-                            _LOGGER.warning(
-                                "Failed to fetch spawn status for %s: %s",
-                                spawn_session_key,
-                                err,
-                            )
-                            return
-                        status_payload = status_payload.get("payload", status_payload)
-                        status = status_payload.get("status")
-                        if status and status not in ("running", "pending"):
-                            response_text = None
-                            try:
-                                history_payload = await _async_request_json(
-                                    hass,
-                                    poll_entry,
-                                    "GET",
-                                    f"sessions/{spawn_session_key}/history",
-                                    params={"limit": "1"},
-                                )
-                                history_payload = history_payload.get(
-                                    "payload", history_payload
-                                )
-                                messages = history_payload.get("messages", [])
-                                if messages:
-                                    response_text = messages[-1].get("content")
-                            except Exception as err:  # pylint: disable=broad-except
-                                _LOGGER.debug(
-                                    "Failed to fetch spawn history for %s: %s",
-                                    spawn_session_key,
-                                    err,
-                                )
-
-                            hass.bus.async_fire(
-                                EVENT_TASK_COMPLETE,
-                                {
-                                    "session_key": spawn_session_key,
-                                    "label": spawn_label_value,
-                                    "status": status,
-                                    "response": response_text,
-                                    "duration": status_payload.get("duration"),
-                                    "model": status_payload.get("model"),
-                                    "usage": status_payload.get("usage"),
-                                },
-                            )
-                            return
-
-                        if asyncio.get_running_loop().time() - start >= max_wait:
-                            hass.bus.async_fire(
-                                EVENT_TASK_COMPLETE,
-                                {
-                                    "session_key": spawn_session_key,
-                                    "label": spawn_label_value,
-                                    "status": "timeout",
-                                    "response": None,
-                                    "duration": status_payload.get("duration"),
-                                    "model": status_payload.get("model"),
-                                    "usage": status_payload.get("usage"),
-                                },
-                            )
-                            return
-
-                        await asyncio.sleep(5)
-
-                max_wait = timeout_seconds or 3600
-                hass.async_create_task(
-                    _poll_status(entry, session_key, spawn_label, max_wait)
-                )
-
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_SPAWN_TASK,
-            _async_handle_spawn_task,
-            schema=_SPAWN_SCHEMA,
-        )
-
-        async def _async_handle_cron_add(call) -> None:
-            entry_id = call.data.get("entry_id")
-            schedule = call.data["schedule"]
-            text = call.data["text"]
-            context_messages = call.data.get("context_messages")
-
-            entries = await _async_iter_target_entries(hass, entry_id)
-            for target_entry in entries:
-                try:
-                    payload = await _async_request_json(
-                        hass,
-                        target_entry,
-                        "POST",
-                        "cron/add",
-                        json_body={
-                            "schedule": schedule,
-                            "text": text,
-                            **(
-                                {"contextMessages": context_messages}
-                                if context_messages is not None
-                                else {}
-                            ),
-                        },
-                    )
-                except Exception as err:  # pylint: disable=broad-except
-                    _LOGGER.warning(
-                        "Failed to add cron job for %s: %s",
-                        target_entry.entry_id,
-                        err,
-                    )
-                    continue
-
-                payload = payload.get("payload", payload)
-                hass.bus.async_fire(
-                    EVENT_CRON_ADDED,
-                    {
-                        "job_id": payload.get("jobId"),
-                        "schedule": schedule,
-                        "text": text,
-                    },
-                )
-
-        async def _async_handle_cron_remove(call) -> None:
-            entry_id = call.data.get("entry_id")
-            job_id = call.data["job_id"]
-
-            entries = await _async_iter_target_entries(hass, entry_id)
-            for target_entry in entries:
-                try:
-                    await _async_request_json(
-                        hass,
-                        target_entry,
-                        "DELETE",
-                        f"cron/{job_id}",
-                    )
-                except Exception as err:  # pylint: disable=broad-except
-                    _LOGGER.warning(
-                        "Failed to remove cron job for %s: %s",
-                        target_entry.entry_id,
-                        err,
-                    )
-                    continue
-
-                hass.bus.async_fire(
-                    EVENT_CRON_REMOVED,
-                    {"job_id": job_id},
-                )
-
-        async def _async_handle_cron_run(call) -> None:
-            entry_id = call.data.get("entry_id")
-            job_id = call.data["job_id"]
-            mode = call.data.get("mode", "now")
-
-            entries = await _async_iter_target_entries(hass, entry_id)
-            for target_entry in entries:
-                try:
-                    payload = await _async_request_json(
-                        hass,
-                        target_entry,
-                        "POST",
-                        f"cron/{job_id}/run",
-                        json_body={"mode": mode},
-                    )
-                except Exception as err:  # pylint: disable=broad-except
-                    _LOGGER.warning(
-                        "Failed to run cron job for %s: %s",
-                        target_entry.entry_id,
-                        err,
-                    )
-                    continue
-
-                payload = payload.get("payload", payload)
-                hass.bus.async_fire(
-                    EVENT_CRON_RUN,
-                    {
-                        "job_id": job_id,
-                        "executed": payload.get("executed"),
-                        "response": payload.get("response"),
-                    },
-                )
-
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_CRON_ADD,
-            _async_handle_cron_add,
-            schema=_CRON_ADD_SCHEMA,
-        )
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_CRON_REMOVE,
-            _async_handle_cron_remove,
-            schema=_CRON_REMOVE_SCHEMA,
-        )
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_CRON_RUN,
-            _async_handle_cron_run,
-            schema=_CRON_RUN_SCHEMA,
         )
         hass.data[DOMAIN][_SERVICE_REGISTERED] = True
 

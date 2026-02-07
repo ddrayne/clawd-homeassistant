@@ -295,3 +295,39 @@ class TestConnect:
         err = GatewayAuthenticationError("bad token")
         client._gateway._fatal_error = err
         assert client.fatal_error is err
+
+
+class TestConnectSnapshot:
+    def test_passthrough_property(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, None)
+        client._gateway._connect_snapshot = {"snapshot": {"uptimeMs": 500}}
+        assert client.connect_snapshot == {"snapshot": {"uptimeMs": 500}}
+
+    def test_defaults_empty(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, None)
+        assert client.connect_snapshot == {}
+
+
+class TestPresence:
+    def test_passthrough_property(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, None)
+        client._gateway._presence = {"clients": ["a", "b"]}
+        assert client.presence == {"clients": ["a", "b"]}
+
+    def test_event_updates_state(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, None)
+        assert client.presence == {}
+
+        client._handle_presence_event(
+            {"payload": {"clients": ["ha-client"]}}
+        )
+
+        assert client.presence == {"clients": ["ha-client"]}
+
+    def test_event_with_empty_payload_ignored(self) -> None:
+        client = ClawdGatewayClient("localhost", 1, None)
+        client._gateway._presence = {"clients": ["existing"]}
+
+        client._handle_presence_event({"payload": {}})
+
+        assert client.presence == {"clients": ["existing"]}

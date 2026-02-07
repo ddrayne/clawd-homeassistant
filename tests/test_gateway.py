@@ -181,3 +181,83 @@ class TestHandshake:
         await protocol._handshake()
 
         assert protocol._websocket.sent[0]["method"] == "connect"
+
+    @pytest.mark.asyncio
+    async def test_snapshot_captured_from_handshake(self) -> None:
+        snapshot_data = {
+            "snapshot": {
+                "uptimeMs": 123456,
+                "health": {"status": "ok"},
+                "presence": {"clients": ["a"]},
+                "stateVersion": 7,
+            },
+            "policy": {"maxSessions": 5},
+        }
+
+        def response(sent):
+            return {
+                "type": "res",
+                "id": sent[-1]["id"],
+                "ok": True,
+                "payload": snapshot_data,
+            }
+
+        protocol = GatewayProtocol("localhost", 1, None)
+        protocol._websocket = DummyWebSocket([response])
+
+        await protocol._handshake()
+
+        assert protocol.connect_snapshot == snapshot_data
+        assert protocol.connect_snapshot["snapshot"]["uptimeMs"] == 123456
+
+    @pytest.mark.asyncio
+    async def test_snapshot_defaults_to_empty(self) -> None:
+        def response(sent):
+            return {
+                "type": "res",
+                "id": sent[-1]["id"],
+                "ok": True,
+            }
+
+        protocol = GatewayProtocol("localhost", 1, None)
+        protocol._websocket = DummyWebSocket([response])
+
+        await protocol._handshake()
+
+        assert protocol.connect_snapshot == {}
+
+    @pytest.mark.asyncio
+    async def test_presence_seeded_from_snapshot(self) -> None:
+        presence = {"clients": ["ha-client"]}
+
+        def response(sent):
+            return {
+                "type": "res",
+                "id": sent[-1]["id"],
+                "ok": True,
+                "payload": {"snapshot": {"presence": presence}},
+            }
+
+        protocol = GatewayProtocol("localhost", 1, None)
+        protocol._websocket = DummyWebSocket([response])
+
+        await protocol._handshake()
+
+        assert protocol.presence == presence
+
+    @pytest.mark.asyncio
+    async def test_presence_empty_when_no_snapshot(self) -> None:
+        def response(sent):
+            return {
+                "type": "res",
+                "id": sent[-1]["id"],
+                "ok": True,
+                "payload": {},
+            }
+
+        protocol = GatewayProtocol("localhost", 1, None)
+        protocol._websocket = DummyWebSocket([response])
+
+        await protocol._handshake()
+
+        assert protocol.presence == {}

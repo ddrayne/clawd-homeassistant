@@ -128,8 +128,9 @@ class ClawdGatewayClient:
         self._thinking = thinking
         self._agent_runs: dict[str, AgentRun] = {}
 
-        # Register event handler
+        # Register event handlers
         self._gateway.on_event("agent", self._handle_agent_event)
+        self._gateway.on_event("presence", self._handle_presence_event)
 
     @property
     def fatal_error(self) -> Exception | None:
@@ -434,6 +435,22 @@ class ClawdGatewayClient:
             _LOGGER.debug("Agent run %s status: %s (not complete)", run_id, status)
         elif phase:
             _LOGGER.debug("Agent run %s phase: %s", run_id, phase)
+
+    @property
+    def connect_snapshot(self) -> dict[str, Any]:
+        """Return the snapshot received during the connect handshake."""
+        return self._gateway.connect_snapshot
+
+    @property
+    def presence(self) -> dict[str, Any]:
+        """Return the latest presence data."""
+        return self._gateway.presence
+
+    def _handle_presence_event(self, event: dict[str, Any]) -> None:
+        """Handle presence event and update state."""
+        payload = event.get("payload", {})
+        if payload:
+            self._gateway._presence = payload
 
     async def health(self) -> dict[str, Any]:
         """Get Gateway health status."""
