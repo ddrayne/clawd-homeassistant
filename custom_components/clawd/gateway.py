@@ -8,7 +8,7 @@ import uuid
 from typing import Any, Callable
 
 from websockets.asyncio.client import connect
-from websockets.exceptions import ConnectionClosedError
+from websockets.exceptions import ConnectionClosedError, InvalidStatus
 
 from .const import (
     CLIENT_DISPLAY_NAME,
@@ -215,6 +215,28 @@ class GatewayProtocol:
                     if self._on_fatal_error:
                         self._on_fatal_error(err)
                 break
+
+            except InvalidStatus as err:
+                if err.response.status_code in (401, 403):
+                    auth_err = GatewayAuthenticationError(
+                        f"Gateway rejected connection: HTTP {err.response.status_code}"
+                    )
+                    self._fatal_error = auth_err
+                    _LOGGER.error(
+                        "Gateway authentication failed (HTTP %s). Check that "
+                        "the token in Settings > Devices & Services > Clawd "
+                        "> Configure matches your gateway token "
+                        "(clawdbot doctor --generate-gateway-token)",
+                        err.response.status_code,
+                    )
+                    if self._on_fatal_error:
+                        self._on_fatal_error(auth_err)
+                    break
+                _LOGGER.warning(
+                    "Gateway rejected WebSocket upgrade: HTTP %s",
+                    err.response.status_code,
+                )
+                await asyncio.sleep(5)
 
             except ConnectionClosedError as err:
                 if err.rcvd and err.rcvd.code == 1012:
