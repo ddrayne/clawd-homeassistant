@@ -1,6 +1,6 @@
 reconnect:
   name: Reconnect
-  description: Reconnect to the Clawd Gateway for one entry or all entries.
+  description: Reconnect to the OpenClaw Gateway for one entry or all entries.
   fields:
     entry_id:
       name: Entry ID
@@ -8,7 +8,7 @@ reconnect:
       example: "abcd1234efgh5678"
 set_session:
   name: Set Session
-  description: Switch the active Clawdbot session for one entry or all entries.
+  description: Switch the active OpenClaw session for one entry or all entries.
   fields:
     entry_id:
       name: Entry ID

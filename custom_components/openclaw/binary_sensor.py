@@ -1,4 +1,4 @@
-"""Binary sensor for Clawd gateway connectivity."""
+"""Binary sensor for OpenClaw gateway connectivity."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .gateway_client import ClawdGatewayClient
+from .gateway_client import OpenClawGatewayClient
 
 SCAN_INTERVAL = timedelta(seconds=10)
 
@@ -25,12 +25,12 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Clawd binary sensor."""
-    gateway_client: ClawdGatewayClient = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([ClawdGatewayConnectivitySensor(entry, gateway_client)])
+    """Set up OpenClaw binary sensor."""
+    gateway_client: OpenClawGatewayClient = hass.data[DOMAIN][entry.entry_id]
+    async_add_entities([OpenClawGatewayConnectivitySensor(entry, gateway_client)])
 
 
-class ClawdGatewayConnectivitySensor(BinarySensorEntity):
+class OpenClawGatewayConnectivitySensor(BinarySensorEntity):
     """Binary sensor for gateway connection status."""
 
     _attr_has_entity_name = True
@@ -40,7 +40,7 @@ class ClawdGatewayConnectivitySensor(BinarySensorEntity):
     _attr_should_poll = True
 
     def __init__(
-        self, config_entry: ConfigEntry, gateway_client: ClawdGatewayClient
+        self, config_entry: ConfigEntry, gateway_client: OpenClawGatewayClient
     ) -> None:
         """Initialize the binary sensor."""
         self._config_entry = config_entry
@@ -52,8 +52,8 @@ class ClawdGatewayConnectivitySensor(BinarySensorEntity):
         """Return device info for the gateway."""
         return {
             "identifiers": {(DOMAIN, self._config_entry.entry_id)},
-            "name": "Clawd Gateway",
-            "manufacturer": "Clawdbot",
+            "name": "OpenClaw Gateway",
+            "manufacturer": "OpenClaw",
             "model": "Gateway",
         }
 

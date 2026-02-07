@@ -1,5 +1,5 @@
 [project]
-name = "clawd-homeassistant"
+name = "openclaw-homeassistant"
 version = "0.1.0"
 requires-python = ">=3.11"
 
@@ -20,13 +20,13 @@ asyncio_default_fixture_loop_scope = "function"
 addopts = [
     "--strict-markers",
     "-ra",
-    "--cov=custom_components/clawd",
+    "--cov=custom_components/openclaw",
     "--cov-report=term-missing",
     "--cov-report=html",
 ]
 
 [tool.coverage.run]
-source = ["custom_components/clawd"]
+source = ["custom_components/openclaw"]
 branch = true
 
 [tool.coverage.report]

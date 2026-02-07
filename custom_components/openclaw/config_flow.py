@@ -1,4 +1,4 @@
-"""Config flow for Clawd integration."""
+"""Config flow for OpenClaw integration."""
 
 import asyncio
 import logging
@@ -36,7 +36,7 @@ from .exceptions import (
     GatewayConnectionError,
     GatewayTimeoutError,
 )
-from .gateway_client import ClawdGatewayClient
+from .gateway_client import OpenClawGatewayClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ async def validate_connection(
     hass: HomeAssistant, data: dict[str, Any]
 ) -> dict[str, Any]:
     """Validate the Gateway connection."""
-    client = ClawdGatewayClient(
+    client = OpenClawGatewayClient(
         host=data[CONF_HOST],
         port=data[CONF_PORT],
         token=data.get(CONF_TOKEN),
@@ -62,7 +62,7 @@ async def validate_connection(
         await client.health()
 
         # Return validated data
-        return {"title": f"Clawd Gateway ({data[CONF_HOST]})"}
+        return {"title": f"OpenClaw Gateway ({data[CONF_HOST]})"}
 
     finally:
         await client.disconnect()
@@ -142,8 +142,8 @@ def _build_thinking_selector() -> selector.SelectSelector:
     )
 
 
-class ClawdConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Clawd."""
+class OpenClawConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for OpenClaw."""
 
     VERSION = 1
 
@@ -326,11 +326,11 @@ class ClawdConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
-        return ClawdOptionsFlowHandler()
+        return OpenClawOptionsFlowHandler()
 
 
-class ClawdOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle Clawd options."""
+class OpenClawOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle OpenClaw options."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None

@@ -1,6 +1,6 @@
-"""Constants for the Clawd integration."""
+"""Constants for the OpenClaw integration."""
 
-DOMAIN = "clawd"
+DOMAIN = "openclaw"
 
 # Configuration defaults
 DEFAULT_HOST = "127.0.0.1"
@@ -36,7 +36,7 @@ PROTOCOL_MAX_VERSION = 3
 
 # Client identification
 CLIENT_ID = "gateway-client"
-CLIENT_DISPLAY_NAME = "Home Assistant Clawd"
+CLIENT_DISPLAY_NAME = "Home Assistant OpenClaw"
 CLIENT_VERSION = "1.0.0"
 CLIENT_PLATFORM = "python"
 CLIENT_MODE = "backend"

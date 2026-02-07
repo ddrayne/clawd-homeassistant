@@ -1,4 +1,4 @@
-"""The Clawd integration."""
+"""The OpenClaw integration."""
 
 import inspect
 import logging
@@ -33,7 +33,7 @@ from .exceptions import (
     GatewayConnectionError,
     GatewayTimeoutError,
 )
-from .gateway_client import ClawdGatewayClient
+from .gateway_client import OpenClawGatewayClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,8 +63,8 @@ _OPTION_KEYS = {
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Clawd from a config entry."""
-    _LOGGER.info("Setting up Clawd integration")
+    """Set up OpenClaw from a config entry."""
+    _LOGGER.info("Setting up OpenClaw integration")
 
     # Migrate option-like keys from data to options for existing entries.
     if not entry.options:
@@ -79,7 +79,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     options = entry.options
 
     # Create Gateway client with config from entry.data
-    gateway_client = ClawdGatewayClient(
+    gateway_client = OpenClawGatewayClient(
         host=entry.data[CONF_HOST],
         port=entry.data[CONF_PORT],
         token=options.get(CONF_TOKEN, entry.data.get(CONF_TOKEN)),
@@ -103,7 +103,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         await gateway_client.connect()
         _LOGGER.info(
-            "Connected to Clawd Gateway at %s:%s",
+            "Connected to OpenClaw Gateway at %s:%s",
             entry.data[CONF_HOST],
             entry.data[CONF_PORT],
         )
@@ -213,10 +213,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    _LOGGER.info("Unloading Clawd integration")
+    _LOGGER.info("Unloading OpenClaw integration")
 
     # Get client before unloading
-    gateway_client: ClawdGatewayClient | None = (
+    gateway_client: OpenClawGatewayClient | None = (
         hass.data.get(DOMAIN, {}).get(entry.entry_id)
     )
     if gateway_client is None:
@@ -248,7 +248,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Always disconnect and cleanup, even if unload failed
     if gateway_client is not None:
         await gateway_client.disconnect()
-        _LOGGER.info("Disconnected from Clawd Gateway")
+        _LOGGER.info("Disconnected from OpenClaw Gateway")
     hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
 
     return unload_ok

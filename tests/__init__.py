@@ -1,1 +1,1 @@
-"""Tests for the Clawd Home Assistant integration."""
+"""Tests for the OpenClaw Home Assistant integration."""

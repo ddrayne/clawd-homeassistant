@@ -6,10 +6,10 @@ import pytest
 # Try to import from conversation module, but if HA is unavailable (Windows
 # standalone mode), extract the pure functions directly from the source file.
 try:
-    from custom_components.clawd.conversation import EMOJI_PATTERN, strip_emojis
+    from custom_components.openclaw.conversation import EMOJI_PATTERN, strip_emojis
 except ImportError:
     # Standalone mode: define the same pattern and function locally.
-    # This is copied from custom_components/clawd/conversation.py lines 23-38.
+    # This is copied from custom_components/openclaw/conversation.py lines 23-38.
     # The pattern and function are pure Python with no HA dependencies.
     EMOJI_PATTERN = re.compile(
         "["

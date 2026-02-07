@@ -1,16 +1,16 @@
 # Roadmap & Enhancement Plan
 
-This document tracks release scope and future ideas for the Clawd Home Assistant integration.
+This document tracks release scope and future ideas for the OpenClaw Home Assistant integration.
 
 ## Release 1.2 (Beta) - Done
 
 - Streaming responses with HA streaming fallback
 - Persistent WebSocket connection with keepalive and reconnects
-- Session selector in config flow + `clawd.set_session`
+- Session selector in config flow + `openclaw.set_session`
 - Model override and thinking mode override
 - Usage sensors (tokens, cost, message count)
-- Background task spawning (`clawd.spawn_task`) with `clawd_task_complete` event
-- Cron services (`clawd.cron_add`, `clawd.cron_remove`, `clawd.cron_run`)
+- Background task spawning (`openclaw.spawn_task`) with `openclaw_task_complete` event
+- Cron services (`openclaw.cron_add`, `openclaw.cron_remove`, `openclaw.cron_run`)
 
 ## 2.0 Candidates (Backburner)
 
@@ -22,7 +22,7 @@ This document tracks release scope and future ideas for the Clawd Home Assistant
 - Integration with HA's LLM conversation API
 
 ### Scheduling & Automation
-- Natural language reminders (`clawd.schedule_reminder`)
+- Natural language reminders (`openclaw.schedule_reminder`)
 - Cron job listing UI or sensors
 - Event hooks for cron run outcomes
 

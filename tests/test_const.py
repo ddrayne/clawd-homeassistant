@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-# Load const.py directly to avoid triggering custom_components.clawd.__init__
+# Load const.py directly to avoid triggering custom_components.openclaw.__init__
 # which imports homeassistant
-_const_path = Path(__file__).parent.parent / "custom_components" / "clawd" / "const.py"
-_spec = importlib.util.spec_from_file_location("clawd_const", _const_path)
+_const_path = Path(__file__).parent.parent / "custom_components" / "openclaw" / "const.py"
+_spec = importlib.util.spec_from_file_location("openclaw_const", _const_path)
 _const = importlib.util.module_from_spec(_spec)
-sys.modules["clawd_const"] = _const
+sys.modules["openclaw_const"] = _const
 _spec.loader.exec_module(_const)
 
 # Import all constants from the loaded module
@@ -27,8 +27,8 @@ CONF_TTS_MAX_CHARS = _const.CONF_TTS_MAX_CHARS
 
 
 class TestDomain:
-    def test_domain_is_clawd(self) -> None:
-        assert DOMAIN == "clawd"
+    def test_domain_is_openclaw(self) -> None:
+        assert DOMAIN == "openclaw"
 
 
 class TestConfigurationKeys:

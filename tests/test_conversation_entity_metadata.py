@@ -68,16 +68,16 @@ def _load_conversation_module():
     intent_mod.IntentResponse = IntentResponse
     entity_platform_mod.AddEntitiesCallback = object
 
-    base = Path(__file__).parent.parent / "custom_components" / "clawd"
+    base = Path(__file__).parent.parent / "custom_components" / "openclaw"
     sys.modules.setdefault("custom_components", ModuleType("custom_components"))
-    sys.modules.setdefault("custom_components.clawd", ModuleType("custom_components.clawd"))
+    sys.modules.setdefault("custom_components.openclaw", ModuleType("custom_components.openclaw"))
 
-    _load_module("custom_components.clawd.const", base / "const.py")
-    _load_module("custom_components.clawd.exceptions", base / "exceptions.py")
-    _load_module("custom_components.clawd.gateway", base / "gateway.py")
-    _load_module("custom_components.clawd.gateway_client", base / "gateway_client.py")
+    _load_module("custom_components.openclaw.const", base / "const.py")
+    _load_module("custom_components.openclaw.exceptions", base / "exceptions.py")
+    _load_module("custom_components.openclaw.gateway", base / "gateway.py")
+    _load_module("custom_components.openclaw.gateway_client", base / "gateway_client.py")
     return _load_module(
-        "custom_components.clawd.conversation", base / "conversation.py"
+        "custom_components.openclaw.conversation", base / "conversation.py"
     )
 
 
@@ -100,10 +100,10 @@ def test_entity_metadata_properties() -> None:
         "tts_max_chars": 123,
     }
 
-    entity = conversation.ClawdConversationEntity(entry, MagicMock())
+    entity = conversation.OpenClawConversationEntity(entry, MagicMock())
 
     assert entity.device_info["identifiers"] == {(conversation.DOMAIN, "entry-1")}
-    assert entity.device_info["manufacturer"] == "Clawdbot"
+    assert entity.device_info["manufacturer"] == "OpenClaw"
     assert entity.extra_state_attributes["host"] == "localhost"
     assert entity.extra_state_attributes["use_ssl"] is True
     assert entity.extra_state_attributes["strip_emojis"] is False
@@ -126,7 +126,7 @@ def test_error_message_added_to_chat_log() -> None:
     entry.entry_id = "entry-1"
     entry.data = {"strip_emojis": True}
     entry.options = {}
-    entity = conversation.ClawdConversationEntity(entry, MagicMock())
+    entity = conversation.OpenClawConversationEntity(entry, MagicMock())
 
     user_input = MagicMock()
     user_input.language = "en"

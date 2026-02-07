@@ -1,4 +1,4 @@
-"""Conversation entity for Clawd integration."""
+"""Conversation entity for OpenClaw integration."""
 
 import logging
 import re
@@ -23,7 +23,7 @@ from .exceptions import (
     GatewayConnectionError,
     GatewayTimeoutError,
 )
-from .gateway_client import ClawdGatewayClient
+from .gateway_client import OpenClawGatewayClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,22 +60,22 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Clawd conversation entity."""
-    gateway_client: ClawdGatewayClient = hass.data[DOMAIN][config_entry.entry_id]
+    """Set up OpenClaw conversation entity."""
+    gateway_client: OpenClawGatewayClient = hass.data[DOMAIN][config_entry.entry_id]
 
-    async_add_entities([ClawdConversationEntity(config_entry, gateway_client)])
+    async_add_entities([OpenClawConversationEntity(config_entry, gateway_client)])
 
 
-class ClawdConversationEntity(conversation.ConversationEntity):
-    """Clawd conversation entity."""
+class OpenClawConversationEntity(conversation.ConversationEntity):
+    """OpenClaw conversation entity."""
 
     _attr_has_entity_name = True
-    _attr_name = "Clawd"
+    _attr_name = "OpenClaw"
     _attr_supported_languages = "*"
     _attr_supports_streaming = False
 
     def __init__(
-        self, config_entry: ConfigEntry, gateway_client: ClawdGatewayClient
+        self, config_entry: ConfigEntry, gateway_client: OpenClawGatewayClient
     ) -> None:
         """Initialize the conversation entity."""
         self._config_entry = config_entry
@@ -106,8 +106,8 @@ class ClawdConversationEntity(conversation.ConversationEntity):
         """Return device info for the gateway."""
         return {
             "identifiers": {(DOMAIN, self._config_entry.entry_id)},
-            "name": "Clawd Gateway",
-            "manufacturer": "Clawdbot",
+            "name": "OpenClaw Gateway",
+            "manufacturer": "OpenClaw",
             "model": "Gateway",
         }
 
@@ -176,7 +176,7 @@ class ClawdConversationEntity(conversation.ConversationEntity):
             return self._create_error_result(
                 user_input,
                 "The gateway token is no longer valid. Please update it in "
-                "Settings, Devices and Services, Clawd, Configure.",
+                "Settings, Devices and Services, OpenClaw, Configure.",
                 chat_log,
             )
 
@@ -297,7 +297,7 @@ class ClawdConversationEntity(conversation.ConversationEntity):
             if not had_content:
                 message = (
                     "The gateway token is no longer valid. Please update it in "
-                    "Settings, Devices and Services, Clawd, Configure."
+                    "Settings, Devices and Services, OpenClaw, Configure."
                 )
                 chunks = [message]
                 yield message

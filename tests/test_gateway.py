@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-_BASE = Path(__file__).parent.parent / "custom_components" / "clawd"
+_BASE = Path(__file__).parent.parent / "custom_components" / "openclaw"
 
 
 def _load_module(name: str, path: Path):
@@ -22,11 +22,11 @@ def _load_module(name: str, path: Path):
 
 
 sys.modules.setdefault("custom_components", ModuleType("custom_components"))
-sys.modules.setdefault("custom_components.clawd", ModuleType("custom_components.clawd"))
+sys.modules.setdefault("custom_components.openclaw", ModuleType("custom_components.openclaw"))
 
-_const = _load_module("custom_components.clawd.const", _BASE / "const.py")
-_exceptions = _load_module("custom_components.clawd.exceptions", _BASE / "exceptions.py")
-_gateway = _load_module("custom_components.clawd.gateway", _BASE / "gateway.py")
+_const = _load_module("custom_components.openclaw.const", _BASE / "const.py")
+_exceptions = _load_module("custom_components.openclaw.exceptions", _BASE / "exceptions.py")
+_gateway = _load_module("custom_components.openclaw.gateway", _BASE / "gateway.py")
 
 GatewayAuthenticationError = _exceptions.GatewayAuthenticationError
 GatewayConnectionError = _exceptions.GatewayConnectionError
@@ -69,7 +69,7 @@ class TestSendRequest:
         async def fake_wait_for(_future, timeout=None):
             raise asyncio.TimeoutError
 
-        import custom_components.clawd.gateway as gateway_module
+        import custom_components.openclaw.gateway as gateway_module
 
         monkeypatch.setattr(gateway_module.asyncio, "wait_for", fake_wait_for)
 

@@ -1,4 +1,4 @@
-"""Low-level WebSocket protocol client for Clawdbot Gateway."""
+"""Low-level WebSocket protocol client for OpenClaw Gateway."""
 
 import asyncio
 import json
@@ -29,7 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class GatewayProtocol:
-    """Low-level Clawdbot Gateway WebSocket protocol implementation."""
+    """Low-level OpenClaw Gateway WebSocket protocol implementation."""
 
     def __init__(
         self,
@@ -174,9 +174,9 @@ class GatewayProtocol:
                         self._fatal_error = err
                         _LOGGER.error(
                             "Gateway authentication failed. Check that the "
-                            "token in Settings > Devices & Services > Clawd "
+                            "token in Settings > Devices & Services > OpenClaw "
                             "> Configure matches your gateway token "
-                            "(clawdbot doctor --generate-gateway-token). "
+                            "(openclaw doctor --generate-gateway-token). "
                             "Detail: %s",
                             err,
                         )
@@ -240,9 +240,9 @@ class GatewayProtocol:
                     self._fatal_error = auth_err
                     _LOGGER.error(
                         "Gateway authentication failed (HTTP %s). Check that "
-                        "the token in Settings > Devices & Services > Clawd "
+                        "the token in Settings > Devices & Services > OpenClaw "
                         "> Configure matches your gateway token "
-                        "(clawdbot doctor --generate-gateway-token)",
+                        "(openclaw doctor --generate-gateway-token)",
                         err.response.status_code,
                     )
                     if self._on_fatal_error:

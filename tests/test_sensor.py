@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-_BASE = Path(__file__).parent.parent / "custom_components" / "clawd"
+_BASE = Path(__file__).parent.parent / "custom_components" / "openclaw"
 
 # ── stub homeassistant modules ──
 
@@ -68,7 +68,7 @@ sys.modules["homeassistant.const"] = _const_mod
 sys.modules["homeassistant.helpers.update_coordinator"] = _coordinator_mod
 
 sys.modules.setdefault("custom_components", ModuleType("custom_components"))
-sys.modules.setdefault("custom_components.clawd", ModuleType("custom_components.clawd"))
+sys.modules.setdefault("custom_components.openclaw", ModuleType("custom_components.openclaw"))
 
 
 def _load_module(name: str, path: Path):
@@ -79,18 +79,18 @@ def _load_module(name: str, path: Path):
     return module
 
 
-_const = _load_module("custom_components.clawd.const", _BASE / "const.py")
-_exceptions = _load_module("custom_components.clawd.exceptions", _BASE / "exceptions.py")
-_gateway = _load_module("custom_components.clawd.gateway", _BASE / "gateway.py")
+_const = _load_module("custom_components.openclaw.const", _BASE / "const.py")
+_exceptions = _load_module("custom_components.openclaw.exceptions", _BASE / "exceptions.py")
+_gateway = _load_module("custom_components.openclaw.gateway", _BASE / "gateway.py")
 _gateway_client = _load_module(
-    "custom_components.clawd.gateway_client", _BASE / "gateway_client.py"
+    "custom_components.openclaw.gateway_client", _BASE / "gateway_client.py"
 )
-_sensor = _load_module("custom_components.clawd.sensor", _BASE / "sensor.py")
+_sensor = _load_module("custom_components.openclaw.sensor", _BASE / "sensor.py")
 
-ClawdUptimeSensor = _sensor.ClawdUptimeSensor
-ClawdConnectedClientsSensor = _sensor.ClawdConnectedClientsSensor
-ClawdHealthSensor = _sensor.ClawdHealthSensor
-ClawdGatewayClient = _gateway_client.ClawdGatewayClient
+OpenClawUptimeSensor = _sensor.OpenClawUptimeSensor
+OpenClawConnectedClientsSensor = _sensor.OpenClawConnectedClientsSensor
+OpenClawHealthSensor = _sensor.OpenClawHealthSensor
+OpenClawGatewayClient = _gateway_client.OpenClawGatewayClient
 
 
 def _make_coordinator(data=None):
@@ -100,7 +100,7 @@ def _make_coordinator(data=None):
 
 
 def _make_client(**overrides):
-    client = ClawdGatewayClient("localhost", 1, None)
+    client = OpenClawGatewayClient("localhost", 1, None)
     if "presence" in overrides:
         client._gateway._presence = overrides["presence"]
     if "snapshot" in overrides:
@@ -111,35 +111,35 @@ def _make_client(**overrides):
 # ── Uptime Sensor ──
 
 
-class TestClawdUptimeSensor:
+class TestOpenClawUptimeSensor:
     def test_native_value_from_coordinator(self) -> None:
         client = _make_client()
         coordinator = _make_coordinator({"uptimeMs": 60000})
-        sensor = ClawdUptimeSensor(coordinator, "test_entry", client)
+        sensor = OpenClawUptimeSensor(coordinator, "test_entry", client)
         assert sensor.native_value == 60.0
 
     def test_native_value_fallback_to_snapshot(self) -> None:
         client = _make_client(snapshot={"snapshot": {"uptimeMs": 30000}})
         coordinator = _make_coordinator(None)
-        sensor = ClawdUptimeSensor(coordinator, "test_entry", client)
+        sensor = OpenClawUptimeSensor(coordinator, "test_entry", client)
         assert sensor.native_value == 30.0
 
     def test_native_value_none_when_no_data(self) -> None:
         client = _make_client()
         coordinator = _make_coordinator(None)
-        sensor = ClawdUptimeSensor(coordinator, "test_entry", client)
+        sensor = OpenClawUptimeSensor(coordinator, "test_entry", client)
         assert sensor.native_value is None
 
     def test_native_value_coordinator_takes_precedence(self) -> None:
         client = _make_client(snapshot={"snapshot": {"uptimeMs": 10000}})
         coordinator = _make_coordinator({"uptimeMs": 90000})
-        sensor = ClawdUptimeSensor(coordinator, "test_entry", client)
+        sensor = OpenClawUptimeSensor(coordinator, "test_entry", client)
         assert sensor.native_value == 90.0
 
     def test_extra_state_attributes(self) -> None:
         client = _make_client()
         coordinator = _make_coordinator({"stateVersion": 5, "sessions": 3})
-        sensor = ClawdUptimeSensor(coordinator, "test_entry", client)
+        sensor = OpenClawUptimeSensor(coordinator, "test_entry", client)
         attrs = sensor.extra_state_attributes
         assert attrs["state_version"] == 5
         assert attrs["sessions"] == 3
@@ -147,7 +147,7 @@ class TestClawdUptimeSensor:
     def test_extra_state_attributes_empty(self) -> None:
         client = _make_client()
         coordinator = _make_coordinator(None)
-        sensor = ClawdUptimeSensor(coordinator, "test_entry", client)
+        sensor = OpenClawUptimeSensor(coordinator, "test_entry", client)
         attrs = sensor.extra_state_attributes
         assert attrs["state_version"] is None
         assert attrs["sessions"] is None
@@ -155,88 +155,88 @@ class TestClawdUptimeSensor:
     def test_unique_id(self) -> None:
         client = _make_client()
         coordinator = _make_coordinator(None)
-        sensor = ClawdUptimeSensor(coordinator, "test_entry", client)
+        sensor = OpenClawUptimeSensor(coordinator, "test_entry", client)
         assert sensor._attr_unique_id == "test_entry_gateway_uptime"
 
     def test_device_info(self) -> None:
         client = _make_client()
         coordinator = _make_coordinator(None)
-        sensor = ClawdUptimeSensor(coordinator, "test_entry", client)
+        sensor = OpenClawUptimeSensor(coordinator, "test_entry", client)
         info = sensor.device_info
-        assert ("clawd", "test_entry") in info["identifiers"]
+        assert ("openclaw", "test_entry") in info["identifiers"]
 
 
 # ── Connected Clients Sensor ──
 
 
-class TestClawdConnectedClientsSensor:
+class TestOpenClawConnectedClientsSensor:
     def test_native_value_from_list(self) -> None:
         client = _make_client(presence={"clients": ["a", "b", "c"]})
-        sensor = ClawdConnectedClientsSensor("test_entry", client)
+        sensor = OpenClawConnectedClientsSensor("test_entry", client)
         assert sensor.native_value == 3
 
     def test_native_value_from_int(self) -> None:
         client = _make_client(presence={"clients": 5})
-        sensor = ClawdConnectedClientsSensor("test_entry", client)
+        sensor = OpenClawConnectedClientsSensor("test_entry", client)
         assert sensor.native_value == 5
 
     def test_native_value_none_when_no_presence(self) -> None:
         client = _make_client()
-        sensor = ClawdConnectedClientsSensor("test_entry", client)
+        sensor = OpenClawConnectedClientsSensor("test_entry", client)
         assert sensor.native_value is None
 
     def test_native_value_none_when_clients_missing(self) -> None:
         client = _make_client(presence={"other": "data"})
-        sensor = ClawdConnectedClientsSensor("test_entry", client)
+        sensor = OpenClawConnectedClientsSensor("test_entry", client)
         assert sensor.native_value is None
 
     def test_extra_state_attributes_with_list(self) -> None:
         client = _make_client(presence={"clients": ["ha", "web"]})
-        sensor = ClawdConnectedClientsSensor("test_entry", client)
+        sensor = OpenClawConnectedClientsSensor("test_entry", client)
         attrs = sensor.extra_state_attributes
         assert attrs["client_list"] == ["ha", "web"]
 
     def test_extra_state_attributes_no_list(self) -> None:
         client = _make_client(presence={"clients": 2})
-        sensor = ClawdConnectedClientsSensor("test_entry", client)
+        sensor = OpenClawConnectedClientsSensor("test_entry", client)
         attrs = sensor.extra_state_attributes
         assert "client_list" not in attrs
 
     def test_extra_state_attributes_empty(self) -> None:
         client = _make_client()
-        sensor = ClawdConnectedClientsSensor("test_entry", client)
+        sensor = OpenClawConnectedClientsSensor("test_entry", client)
         attrs = sensor.extra_state_attributes
         assert attrs == {}
 
     def test_unique_id(self) -> None:
         client = _make_client()
-        sensor = ClawdConnectedClientsSensor("test_entry", client)
+        sensor = OpenClawConnectedClientsSensor("test_entry", client)
         assert sensor._attr_unique_id == "test_entry_connected_clients"
 
     def test_device_info(self) -> None:
         client = _make_client()
-        sensor = ClawdConnectedClientsSensor("test_entry", client)
+        sensor = OpenClawConnectedClientsSensor("test_entry", client)
         info = sensor.device_info
-        assert ("clawd", "test_entry") in info["identifiers"]
+        assert ("openclaw", "test_entry") in info["identifiers"]
 
 
 # ── Health Sensor ──
 
 
-class TestClawdHealthSensor:
+class TestOpenClawHealthSensor:
     def test_native_value(self) -> None:
         coordinator = _make_coordinator({"status": "ok"})
-        sensor = ClawdHealthSensor(coordinator, "test_entry")
+        sensor = OpenClawHealthSensor(coordinator, "test_entry")
         assert sensor.native_value == "ok"
 
     def test_native_value_none_when_no_data(self) -> None:
         coordinator = _make_coordinator(None)
-        sensor = ClawdHealthSensor(coordinator, "test_entry")
+        sensor = OpenClawHealthSensor(coordinator, "test_entry")
         assert sensor.native_value is None
 
     def test_native_value_none_when_status_missing(self) -> None:
         coordinator = _make_coordinator({"version": "1.0"})
-        sensor = ClawdHealthSensor(coordinator, "test_entry")
+        sensor = OpenClawHealthSensor(coordinator, "test_entry")
         assert sensor.native_value is None
 
     def test_extra_state_attributes(self) -> None:
@@ -247,7 +247,7 @@ class TestClawdHealthSensor:
             "memoryUsage": 128,
             "cpuUsage": 0.5,
         })
-        sensor = ClawdHealthSensor(coordinator, "test_entry")
+        sensor = OpenClawHealthSensor(coordinator, "test_entry")
         attrs = sensor.extra_state_attributes
         assert attrs["version"] == "2.1.0"
         assert attrs["uptimeMs"] == 50000
@@ -256,23 +256,23 @@ class TestClawdHealthSensor:
 
     def test_extra_state_attributes_omits_missing(self) -> None:
         coordinator = _make_coordinator({"status": "ok"})
-        sensor = ClawdHealthSensor(coordinator, "test_entry")
+        sensor = OpenClawHealthSensor(coordinator, "test_entry")
         attrs = sensor.extra_state_attributes
         assert attrs == {}
 
     def test_extra_state_attributes_empty_data(self) -> None:
         coordinator = _make_coordinator(None)
-        sensor = ClawdHealthSensor(coordinator, "test_entry")
+        sensor = OpenClawHealthSensor(coordinator, "test_entry")
         attrs = sensor.extra_state_attributes
         assert attrs == {}
 
     def test_unique_id(self) -> None:
         coordinator = _make_coordinator(None)
-        sensor = ClawdHealthSensor(coordinator, "test_entry")
+        sensor = OpenClawHealthSensor(coordinator, "test_entry")
         assert sensor._attr_unique_id == "test_entry_gateway_health"
 
     def test_device_info(self) -> None:
         coordinator = _make_coordinator(None)
-        sensor = ClawdHealthSensor(coordinator, "test_entry")
+        sensor = OpenClawHealthSensor(coordinator, "test_entry")
         info = sensor.device_info
-        assert ("clawd", "test_entry") in info["identifiers"]
+        assert ("openclaw", "test_entry") in info["identifiers"]

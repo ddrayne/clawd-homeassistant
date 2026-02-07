@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connect to Clawd Gateway",
-        "description": "Configure connection to your Clawdbot Gateway",
+        "title": "Connect to OpenClaw Gateway",
+        "description": "Configure connection to your OpenClaw Gateway",
         "data": {
           "host": "Host",
           "port": "Port",
@@ -24,7 +24,7 @@
         }
       },
       "reauth_confirm": {
-        "title": "Re-authenticate Clawd Gateway",
+        "title": "Re-authenticate OpenClaw Gateway",
         "description": "The gateway token is no longer valid. Please update your connection settings.",
         "data": {
           "host": "Host",
@@ -48,7 +48,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Clawd Gateway Options",
+        "title": "OpenClaw Gateway Options",
         "description": "Update Gateway connection settings",
         "data": {
           "host": "Host",
@@ -68,7 +68,7 @@
   "issues": {
     "gateway_auth_failed": {
       "title": "Gateway authentication failed",
-      "description": "The Clawd Gateway token is no longer valid. Update your token in Settings > Devices & Services > Clawd > Configure."
+      "description": "The OpenClaw Gateway token is no longer valid. Update your token in Settings > Devices & Services > OpenClaw > Configure."
     }
   }
 }

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-_BASE = Path(__file__).parent.parent / "custom_components" / "clawd"
+_BASE = Path(__file__).parent.parent / "custom_components" / "openclaw"
 
 
 def _load_module(name: str, path: Path):
@@ -54,29 +54,29 @@ sys.modules["homeassistant.components.binary_sensor"] = _bs_mod
 sys.modules["homeassistant.const"] = _const_mod
 
 sys.modules.setdefault("custom_components", ModuleType("custom_components"))
-sys.modules.setdefault("custom_components.clawd", ModuleType("custom_components.clawd"))
+sys.modules.setdefault("custom_components.openclaw", ModuleType("custom_components.openclaw"))
 
-_const = _load_module("custom_components.clawd.const", _BASE / "const.py")
-_exceptions = _load_module("custom_components.clawd.exceptions", _BASE / "exceptions.py")
-_gateway = _load_module("custom_components.clawd.gateway", _BASE / "gateway.py")
+_const = _load_module("custom_components.openclaw.const", _BASE / "const.py")
+_exceptions = _load_module("custom_components.openclaw.exceptions", _BASE / "exceptions.py")
+_gateway = _load_module("custom_components.openclaw.gateway", _BASE / "gateway.py")
 _gateway_client = _load_module(
-    "custom_components.clawd.gateway_client", _BASE / "gateway_client.py"
+    "custom_components.openclaw.gateway_client", _BASE / "gateway_client.py"
 )
 _binary_sensor = _load_module(
-    "custom_components.clawd.binary_sensor", _BASE / "binary_sensor.py"
+    "custom_components.openclaw.binary_sensor", _BASE / "binary_sensor.py"
 )
 
-ClawdGatewayConnectivitySensor = _binary_sensor.ClawdGatewayConnectivitySensor
-ClawdGatewayClient = _gateway_client.ClawdGatewayClient
+OpenClawGatewayConnectivitySensor = _binary_sensor.OpenClawGatewayConnectivitySensor
+OpenClawGatewayClient = _gateway_client.OpenClawGatewayClient
 
 
-class TestClawdGatewayConnectivitySensor:
+class TestOpenClawGatewayConnectivitySensor:
     def _make_sensor(self, connected: bool):
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         client._gateway._connected = connected
         config_entry = MagicMock()
         config_entry.entry_id = "test_entry"
-        return ClawdGatewayConnectivitySensor(config_entry, client)
+        return OpenClawGatewayConnectivitySensor(config_entry, client)
 
     def test_is_on_when_connected(self) -> None:
         sensor = self._make_sensor(True)
@@ -93,8 +93,8 @@ class TestClawdGatewayConnectivitySensor:
     def test_device_info(self) -> None:
         sensor = self._make_sensor(False)
         info = sensor.device_info
-        assert ("clawd", "test_entry") in info["identifiers"]
-        assert info["name"] == "Clawd Gateway"
+        assert ("openclaw", "test_entry") in info["identifiers"]
+        assert info["name"] == "OpenClaw Gateway"
 
     def test_device_class(self) -> None:
         sensor = self._make_sensor(False)

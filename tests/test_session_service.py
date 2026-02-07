@@ -52,17 +52,17 @@ async def test_set_session_service_updates_client() -> None:
     issue_mod.async_create_issue = lambda *args, **kwargs: None
     issue_mod.async_delete_issue = lambda *args, **kwargs: None
 
-    base = Path(__file__).parent.parent / "custom_components" / "clawd"
+    base = Path(__file__).parent.parent / "custom_components" / "openclaw"
     sys.modules.setdefault("custom_components", ModuleType("custom_components"))
-    sys.modules.setdefault("custom_components.clawd", ModuleType("custom_components.clawd"))
+    sys.modules.setdefault("custom_components.openclaw", ModuleType("custom_components.openclaw"))
 
-    const = _load_module("custom_components.clawd.const", base / "const.py")
-    _load_module("custom_components.clawd.exceptions", base / "exceptions.py")
+    const = _load_module("custom_components.openclaw.const", base / "const.py")
+    _load_module("custom_components.openclaw.exceptions", base / "exceptions.py")
 
-    gateway_client_mod = ModuleType("custom_components.clawd.gateway_client")
-    sys.modules["custom_components.clawd.gateway_client"] = gateway_client_mod
+    gateway_client_mod = ModuleType("custom_components.openclaw.gateway_client")
+    sys.modules["custom_components.openclaw.gateway_client"] = gateway_client_mod
 
-    class ClawdGatewayClient:
+    class OpenClawGatewayClient:
         def __init__(self, *args, **kwargs) -> None:
             self.disconnect = AsyncMock()
             self.connect = AsyncMock()
@@ -70,9 +70,9 @@ async def test_set_session_service_updates_client() -> None:
             self.set_session_key = MagicMock()
             self._gateway = MagicMock()
 
-    gateway_client_mod.ClawdGatewayClient = ClawdGatewayClient
+    gateway_client_mod.OpenClawGatewayClient = OpenClawGatewayClient
 
-    integration = _load_module("custom_components.clawd.__init__", base / "__init__.py")
+    integration = _load_module("custom_components.openclaw.__init__", base / "__init__.py")
 
     hass = MagicMock()
     hass.data = {}

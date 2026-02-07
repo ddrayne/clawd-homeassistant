@@ -1,4 +1,4 @@
-"""High-level Clawdbot Gateway API client."""
+"""High-level OpenClaw Gateway API client."""
 
 import asyncio
 import logging
@@ -106,7 +106,7 @@ class AgentRun:
             yield chunk
 
 
-class ClawdGatewayClient:
+class OpenClawGatewayClient:
     """High-level Gateway API client with event buffering."""
 
     def __init__(

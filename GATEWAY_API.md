@@ -1,6 +1,6 @@
-# Clawdbot Gateway API Documentation
+# OpenClaw Gateway API Documentation
 
-This document provides comprehensive documentation of the Clawdbot Gateway API for developers building integrations.
+This document provides comprehensive documentation of the OpenClaw Gateway API for developers building integrations.
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ This document provides comprehensive documentation of the Clawdbot Gateway API f
 
 ## Overview
 
-The Clawdbot Gateway provides a unified API for interacting with your AI agent. It exposes both REST and WebSocket endpoints for real-time communication.
+The OpenClaw Gateway provides a unified API for interacting with your AI agent. It exposes both REST and WebSocket endpoints for real-time communication.
 
 **Default Configuration:**
 - Protocol: `ws://` (non-SSL) or `wss://` (SSL)
@@ -52,19 +52,19 @@ Authorization: Bearer YOUR_GATEWAY_TOKEN
 **Generating a Token:**
 ```bash
 # Generate new token
-clawdbot doctor --generate-gateway-token
+openclaw doctor --generate-gateway-token
 
 # Retrieve existing token from environment
-echo $CLAWDBOT_GATEWAY_TOKEN
+echo $OPENCLAW_GATEWAY_TOKEN
 ```
 
 **Starting Gateway with LAN Binding:**
 ```bash
 # Allow connections from local network
-clawdbot gateway --bind lan
+openclaw gateway --bind lan
 
 # Allow from all interfaces (use with caution)
-clawdbot gateway --bind 0.0.0.0
+openclaw gateway --bind 0.0.0.0
 ```
 
 **Security Notes:**
@@ -111,7 +111,7 @@ async def connect_gateway():
         # Send message
         await ws.send(json.dumps({
             "type": "message",
-            "text": "Hello, Clawd!"
+            "text": "Hello, OpenClaw!"
         }))
         
         # Receive response
@@ -599,7 +599,7 @@ Open a URL in controlled browser.
 ```json
 {
   "targetUrl": "https://example.com",
-  "profile": "clawd"
+  "profile": "openclaw"
 }
 ```
 
@@ -801,7 +801,7 @@ import asyncio
 import websockets
 import json
 
-async def chat_with_clawd():
+async def chat_with_openclaw():
     uri = "ws://localhost:18789/gateway/ws/agent?sessionKey=main"
     
     async with websockets.connect(uri) as ws:
@@ -831,7 +831,7 @@ async def chat_with_clawd():
                 print(f"Error: {data['error']}")
                 break
 
-asyncio.run(chat_with_clawd())
+asyncio.run(chat_with_openclaw())
 ```
 
 ### HTTP Request Example (curl)
@@ -875,9 +875,9 @@ curl -X POST http://localhost:18789/cron/add \
 
 ## Support
 
-- **Clawdbot Docs:** https://docs.clawd.bot/
-- **GitHub Issues:** https://github.com/ddrayne/clawd-homeassistant/issues
-- **Discord:** https://discord.com/invite/clawd
+- **OpenClaw Docs:** https://docs.openclaw.ai/
+- **GitHub Issues:** https://github.com/ddrayne/openclaw-homeassistant/issues
+- **Discord:** https://discord.com/invite/openclaw
 
 ---
 

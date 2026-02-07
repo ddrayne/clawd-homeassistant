@@ -1,4 +1,4 @@
-"""WS-backed diagnostic sensors for the Clawd integration."""
+"""WS-backed diagnostic sensors for the OpenClaw integration."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .const import DOMAIN
-from .gateway_client import ClawdGatewayClient
+from .gateway_client import OpenClawGatewayClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,8 +30,8 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Clawd diagnostic sensors."""
-    client: ClawdGatewayClient = hass.data[DOMAIN][entry.entry_id]
+    """Set up OpenClaw diagnostic sensors."""
+    client: OpenClawGatewayClient = hass.data[DOMAIN][entry.entry_id]
 
     async def _async_update_status() -> dict[str, Any]:
         if not client.connected:
@@ -73,13 +73,13 @@ async def async_setup_entry(
             _LOGGER.debug("Initial %s refresh failed, will retry", coordinator.name)
 
     async_add_entities([
-        ClawdUptimeSensor(status_coordinator, entry.entry_id, client),
-        ClawdConnectedClientsSensor(entry.entry_id, client),
-        ClawdHealthSensor(health_coordinator, entry.entry_id),
+        OpenClawUptimeSensor(status_coordinator, entry.entry_id, client),
+        OpenClawConnectedClientsSensor(entry.entry_id, client),
+        OpenClawHealthSensor(health_coordinator, entry.entry_id),
     ])
 
 
-class ClawdUptimeSensor(CoordinatorEntity, SensorEntity):
+class OpenClawUptimeSensor(CoordinatorEntity, SensorEntity):
     """Gateway uptime in seconds."""
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -91,20 +91,20 @@ class ClawdUptimeSensor(CoordinatorEntity, SensorEntity):
         self,
         coordinator: DataUpdateCoordinator,
         entry_id: str,
-        client: ClawdGatewayClient,
+        client: OpenClawGatewayClient,
     ) -> None:
         super().__init__(coordinator)
         self._client = client
         self._entry_id = entry_id
-        self._attr_name = "Clawd Gateway Uptime"
+        self._attr_name = "OpenClaw Gateway Uptime"
         self._attr_unique_id = f"{entry_id}_gateway_uptime"
 
     @property
     def device_info(self) -> dict[str, Any]:
         return {
             "identifiers": {(DOMAIN, self._entry_id)},
-            "name": "Clawd Gateway",
-            "manufacturer": "Clawdbot",
+            "name": "OpenClaw Gateway",
+            "manufacturer": "OpenClaw",
             "model": "Gateway",
         }
 
@@ -130,7 +130,7 @@ class ClawdUptimeSensor(CoordinatorEntity, SensorEntity):
         }
 
 
-class ClawdConnectedClientsSensor(SensorEntity):
+class OpenClawConnectedClientsSensor(SensorEntity):
     """Number of connected gateway clients from presence data."""
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -138,18 +138,18 @@ class ClawdConnectedClientsSensor(SensorEntity):
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_icon = "mdi:account-multiple"
 
-    def __init__(self, entry_id: str, client: ClawdGatewayClient) -> None:
+    def __init__(self, entry_id: str, client: OpenClawGatewayClient) -> None:
         self._client = client
         self._entry_id = entry_id
-        self._attr_name = "Clawd Connected Clients"
+        self._attr_name = "OpenClaw Connected Clients"
         self._attr_unique_id = f"{entry_id}_connected_clients"
 
     @property
     def device_info(self) -> dict[str, Any]:
         return {
             "identifiers": {(DOMAIN, self._entry_id)},
-            "name": "Clawd Gateway",
-            "manufacturer": "Clawdbot",
+            "name": "OpenClaw Gateway",
+            "manufacturer": "OpenClaw",
             "model": "Gateway",
         }
 
@@ -175,7 +175,7 @@ class ClawdConnectedClientsSensor(SensorEntity):
         return attrs
 
 
-class ClawdHealthSensor(CoordinatorEntity, SensorEntity):
+class OpenClawHealthSensor(CoordinatorEntity, SensorEntity):
     """Gateway health status."""
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -188,15 +188,15 @@ class ClawdHealthSensor(CoordinatorEntity, SensorEntity):
     ) -> None:
         super().__init__(coordinator)
         self._entry_id = entry_id
-        self._attr_name = "Clawd Gateway Health"
+        self._attr_name = "OpenClaw Gateway Health"
         self._attr_unique_id = f"{entry_id}_gateway_health"
 
     @property
     def device_info(self) -> dict[str, Any]:
         return {
             "identifiers": {(DOMAIN, self._entry_id)},
-            "name": "Clawd Gateway",
-            "manufacturer": "Clawdbot",
+            "name": "OpenClaw Gateway",
+            "manufacturer": "OpenClaw",
             "model": "Gateway",
         }
 

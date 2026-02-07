@@ -52,17 +52,17 @@ async def test_unload_returns_true_when_entry_missing() -> None:
     issue_mod.async_create_issue = lambda *args, **kwargs: None
     issue_mod.async_delete_issue = lambda *args, **kwargs: None
 
-    base = Path(__file__).parent.parent / "custom_components" / "clawd"
+    base = Path(__file__).parent.parent / "custom_components" / "openclaw"
     sys.modules.setdefault("custom_components", ModuleType("custom_components"))
-    sys.modules.setdefault("custom_components.clawd", ModuleType("custom_components.clawd"))
+    sys.modules.setdefault("custom_components.openclaw", ModuleType("custom_components.openclaw"))
 
-    _load_module("custom_components.clawd.const", base / "const.py")
-    _load_module("custom_components.clawd.exceptions", base / "exceptions.py")
-    gateway_client_mod = ModuleType("custom_components.clawd.gateway_client")
-    sys.modules["custom_components.clawd.gateway_client"] = gateway_client_mod
-    gateway_client_mod.ClawdGatewayClient = object
+    _load_module("custom_components.openclaw.const", base / "const.py")
+    _load_module("custom_components.openclaw.exceptions", base / "exceptions.py")
+    gateway_client_mod = ModuleType("custom_components.openclaw.gateway_client")
+    sys.modules["custom_components.openclaw.gateway_client"] = gateway_client_mod
+    gateway_client_mod.OpenClawGatewayClient = object
 
-    integration = _load_module("custom_components.clawd.__init__", base / "__init__.py")
+    integration = _load_module("custom_components.openclaw.__init__", base / "__init__.py")
 
     hass = MagicMock()
     hass.data = {}

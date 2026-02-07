@@ -1,6 +1,6 @@
-# Understanding Clawdbot Agents
+# Understanding OpenClaw Agents
 
-This guide explains how Clawdbot agents work and how to configure them for optimal Home Assistant integration.
+This guide explains how OpenClaw agents work and how to configure them for optimal Home Assistant integration.
 
 ## Table of Contents
 
@@ -15,7 +15,7 @@ This guide explains how Clawdbot agents work and how to configure them for optim
 
 ## What is an Agent?
 
-A **Clawdbot agent** is an AI assistant instance with:
+A **OpenClaw agent** is an AI assistant instance with:
 - A specific AI model (Claude, GPT, or local models)
 - Custom system prompts and behavior
 - Access to configured skills and integrations
@@ -30,7 +30,7 @@ Think of agents as different "personalities" or "experts" you can talk to, each 
 
 ```
 ┌─────────────────────────────────────────────┐
-│            Clawdbot System                  │
+│            OpenClaw System                  │
 ├─────────────────────────────────────────────┤
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐    │
 │  │ Agent   │  │ Agent   │  │ Agent   │    │
@@ -66,7 +66,7 @@ Think of agents as different "personalities" or "experts" you can talk to, each 
 
 ### Default Agent Configuration
 
-The default `main` agent is configured in `~/.clawdbot/clawdbot.json`:
+The default `main` agent is configured in `~/.openclaw/openclaw.json`:
 
 ```json
 {
@@ -75,7 +75,7 @@ The default `main` agent is configured in `~/.clawdbot/clawdbot.json`:
       "model": {
         "primary": "anthropic/claude-sonnet-4-5"
       },
-      "workspace": "/Users/dan/.clawdbot/workspace",
+      "workspace": "/Users/dan/.openclaw/workspace",
       "heartbeat": {
         "every": "2h",
         "model": "sonnet"
@@ -168,7 +168,7 @@ In the integration configuration, you specify which session to use:
 ```yaml
 session_key: "main"
 ```
-- HA conversations appear in your main Clawdbot session
+- HA conversations appear in your main OpenClaw session
 - Shares context with other platforms (Telegram, Discord)
 - Full conversation history available
 
@@ -177,7 +177,7 @@ session_key: "main"
 session_key: "home-assistant"
 ```
 - Isolated conversation thread
-- Separate from other Clawdbot interactions
+- Separate from other OpenClaw interactions
 - Clean separation of concerns
 
 **Per-family-member:**
@@ -276,7 +276,7 @@ These don't work well with text-to-speech!
 
 **Step 1: Configure the Agent**
 
-Create a new agent in `clawdbot.json`:
+Create a new agent in `openclaw.json`:
 
 ```json
 {
@@ -436,7 +436,7 @@ Each agent can have its own workspace:
 ```json
 {
   "id": "research",
-  "workspace": "/Users/dan/.clawdbot/workspaces/research"
+  "workspace": "/Users/dan/.openclaw/workspaces/research"
 }
 ```
 
@@ -608,17 +608,17 @@ Allow agents to spawn helper agents:
 
 **Check agent status:**
 ```bash
-clawdbot status
+openclaw status
 ```
 
 **Verify agent ID:**
 ```bash
-clawdbot config get | jq '.agents.list'
+openclaw config get | jq '.agents.list'
 ```
 
 **Check logs:**
 ```bash
-tail -f ~/.clawdbot/logs/gateway.log
+tail -f ~/.openclaw/logs/gateway.log
 ```
 
 ### Wrong Agent Responding
@@ -658,7 +658,7 @@ tail -f ~/.clawdbot/logs/gateway.log
 
 **1. Configure Agent**
 
-Edit `~/.clawdbot/clawdbot.json`:
+Edit `~/.openclaw/openclaw.json`:
 
 ```json
 {
@@ -679,13 +679,13 @@ Edit `~/.clawdbot/clawdbot.json`:
 **2. Restart Gateway**
 
 ```bash
-clawdbot gateway restart
+openclaw gateway restart
 ```
 
 **3. Configure Integration**
 
 In Home Assistant:
-- Settings → Devices & Services → Clawd
+- Settings → Devices & Services → OpenClaw
 - Click "Configure"
 - Set `session_key` to `home-assistant`
 - Enable `strip_emojis`
@@ -700,15 +700,15 @@ Try voice commands:
 
 ## Resources
 
-- **Clawdbot Documentation:** https://docs.clawd.bot/
-- **System Prompt Guide:** https://docs.clawd.bot/guides/system-prompts
-- **Agent Configuration:** https://docs.clawd.bot/config/agents
-- **Session Management:** https://docs.clawd.bot/features/sessions
+- **OpenClaw Documentation:** https://docs.openclaw.ai/
+- **System Prompt Guide:** https://docs.openclaw.ai/guides/system-prompts
+- **Agent Configuration:** https://docs.openclaw.ai/config/agents
+- **Session Management:** https://docs.openclaw.ai/features/sessions
 
 ## Support
 
-- **Integration Issues:** https://github.com/ddrayne/clawd-homeassistant/issues
-- **Clawdbot Discord:** https://discord.com/invite/clawd
+- **Integration Issues:** https://github.com/ddrayne/openclaw-homeassistant/issues
+- **OpenClaw Discord:** https://discord.com/invite/openclaw
 - **Home Assistant Community:** https://community.home-assistant.io/
 
 ---

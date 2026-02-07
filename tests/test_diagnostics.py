@@ -31,15 +31,15 @@ async def test_diagnostics_redacts_token_and_includes_health() -> None:
     config_entries_mod.ConfigEntry = object
     core_mod.HomeAssistant = object
 
-    base = Path(__file__).parent.parent / "custom_components" / "clawd"
+    base = Path(__file__).parent.parent / "custom_components" / "openclaw"
     sys.modules.setdefault("custom_components", ModuleType("custom_components"))
-    sys.modules.setdefault("custom_components.clawd", ModuleType("custom_components.clawd"))
+    sys.modules.setdefault("custom_components.openclaw", ModuleType("custom_components.openclaw"))
 
-    _load_module("custom_components.clawd.const", base / "const.py")
-    _load_module("custom_components.clawd.exceptions", base / "exceptions.py")
-    _load_module("custom_components.clawd.gateway", base / "gateway.py")
-    _load_module("custom_components.clawd.gateway_client", base / "gateway_client.py")
-    diagnostics = _load_module("custom_components.clawd.diagnostics", base / "diagnostics.py")
+    _load_module("custom_components.openclaw.const", base / "const.py")
+    _load_module("custom_components.openclaw.exceptions", base / "exceptions.py")
+    _load_module("custom_components.openclaw.gateway", base / "gateway.py")
+    _load_module("custom_components.openclaw.gateway_client", base / "gateway_client.py")
+    diagnostics = _load_module("custom_components.openclaw.diagnostics", base / "diagnostics.py")
 
     entry = MagicMock()
     entry.entry_id = "entry-1"
@@ -51,7 +51,7 @@ async def test_diagnostics_redacts_token_and_includes_health() -> None:
     client.health = AsyncMock(return_value={"status": "ok"})
 
     hass = MagicMock()
-    hass.data = {"clawd": {"entry-1": client}}
+    hass.data = {"openclaw": {"entry-1": client}}
 
     result = await diagnostics.async_get_config_entry_diagnostics(hass, entry)
 

@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-_BASE = Path(__file__).parent.parent / "custom_components" / "clawd"
+_BASE = Path(__file__).parent.parent / "custom_components" / "openclaw"
 
 
 def _load_module(name: str, path: Path):
@@ -21,13 +21,13 @@ def _load_module(name: str, path: Path):
 
 
 sys.modules.setdefault("custom_components", ModuleType("custom_components"))
-sys.modules.setdefault("custom_components.clawd", ModuleType("custom_components.clawd"))
+sys.modules.setdefault("custom_components.openclaw", ModuleType("custom_components.openclaw"))
 
-_const = _load_module("custom_components.clawd.const", _BASE / "const.py")
-_exceptions = _load_module("custom_components.clawd.exceptions", _BASE / "exceptions.py")
-_gateway = _load_module("custom_components.clawd.gateway", _BASE / "gateway.py")
+_const = _load_module("custom_components.openclaw.const", _BASE / "const.py")
+_exceptions = _load_module("custom_components.openclaw.exceptions", _BASE / "exceptions.py")
+_gateway = _load_module("custom_components.openclaw.gateway", _BASE / "gateway.py")
 _gateway_client = _load_module(
-    "custom_components.clawd.gateway_client", _BASE / "gateway_client.py"
+    "custom_components.openclaw.gateway_client", _BASE / "gateway_client.py"
 )
 
 AgentExecutionError = _exceptions.AgentExecutionError
@@ -36,7 +36,7 @@ GatewayConnectionError = _exceptions.GatewayConnectionError
 GatewayTimeoutError = _exceptions.GatewayTimeoutError
 ProtocolError = _exceptions.ProtocolError
 AgentRun = _gateway_client.AgentRun
-ClawdGatewayClient = _gateway_client.ClawdGatewayClient
+OpenClawGatewayClient = _gateway_client.OpenClawGatewayClient
 
 
 class TestAgentRun:
@@ -49,7 +49,7 @@ class TestAgentRun:
 
 class TestHandleAgentEvent:
     def test_buffers_output_from_data_text(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         run = AgentRun("run-1")
         client._agent_runs["run-1"] = run
 
@@ -60,7 +60,7 @@ class TestHandleAgentEvent:
         assert run.get_response() == "Hi"
 
     def test_marks_complete_with_summary(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         run = AgentRun("run-1")
         client._agent_runs["run-1"] = run
 
@@ -73,7 +73,7 @@ class TestHandleAgentEvent:
         assert run.get_response() == "Done"
 
     def test_marks_complete_on_phase_end(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         run = AgentRun("run-1")
         client._agent_runs["run-1"] = run
 
@@ -88,7 +88,7 @@ class TestHandleAgentEvent:
 class TestSendAgentRequest:
     @pytest.mark.asyncio
     async def test_connection_error_propagates(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
             side_effect=GatewayConnectionError("Not connected to Gateway"),
         )
@@ -98,7 +98,7 @@ class TestSendAgentRequest:
 
     @pytest.mark.asyncio
     async def test_missing_run_id_raises(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
             return_value={"payload": {}}
         )
@@ -110,7 +110,7 @@ class TestSendAgentRequest:
 
     @pytest.mark.asyncio
     async def test_timeout_raises_and_cleans_up(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None, timeout=0)
+        client = OpenClawGatewayClient("localhost", 1, None, timeout=0)
         client._timeout = 0.01
         client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
             return_value={"payload": {"runId": "run-1"}}
@@ -123,7 +123,7 @@ class TestSendAgentRequest:
 
     @pytest.mark.asyncio
     async def test_success_returns_buffered_output(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
             return_value={"payload": {"runId": "run-1"}}
         )
@@ -155,7 +155,7 @@ class TestSendAgentRequest:
 
     @pytest.mark.asyncio
     async def test_status_error_raises(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
             return_value={"payload": {"runId": "run-1"}}
         )
@@ -187,7 +187,7 @@ class TestSendAgentRequest:
 class TestStreamAgentRequest:
     @pytest.mark.asyncio
     async def test_connection_error_propagates(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
             side_effect=GatewayConnectionError("Not connected to Gateway"),
         )
@@ -201,7 +201,7 @@ class TestStreamAgentRequest:
 
     @pytest.mark.asyncio
     async def test_streams_chunks_and_cleans_up(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
             return_value={"payload": {"runId": "run-1"}}
         )
@@ -242,7 +242,7 @@ class TestStreamAgentRequest:
 
     @pytest.mark.asyncio
     async def test_stream_timeout_raises_and_cleans_up(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None, timeout=0)
+        client = OpenClawGatewayClient("localhost", 1, None, timeout=0)
         client._timeout = 0.01
         client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
             return_value={"payload": {"runId": "run-1"}}
@@ -261,7 +261,7 @@ class TestStreamAgentRequest:
 class TestConnect:
     @pytest.mark.asyncio
     async def test_connect_raises_on_auth_error(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, "bad-token")
+        client = OpenClawGatewayClient("localhost", 1, "bad-token")
         auth_err = GatewayAuthenticationError("bad token")
         client._gateway._fatal_error = auth_err
         client._gateway.connect = AsyncMock()  # type: ignore[attr-defined]
@@ -272,7 +272,7 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_connect_raises_on_protocol_error(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         client._gateway._fatal_error = ProtocolError("version mismatch")
         client._gateway.connect = AsyncMock()  # type: ignore[attr-defined]
 
@@ -281,7 +281,7 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_connect_raises_timeout_when_no_fatal_error(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         client._gateway.connect = AsyncMock()  # type: ignore[attr-defined]
         # No fatal error, event never set
 
@@ -289,7 +289,7 @@ class TestConnect:
             await client.connect()
 
     def test_fatal_error_property(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         assert client.fatal_error is None
 
         err = GatewayAuthenticationError("bad token")
@@ -299,23 +299,23 @@ class TestConnect:
 
 class TestConnectSnapshot:
     def test_passthrough_property(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         client._gateway._connect_snapshot = {"snapshot": {"uptimeMs": 500}}
         assert client.connect_snapshot == {"snapshot": {"uptimeMs": 500}}
 
     def test_defaults_empty(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         assert client.connect_snapshot == {}
 
 
 class TestPresence:
     def test_passthrough_property(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         client._gateway._presence = {"clients": ["a", "b"]}
         assert client.presence == {"clients": ["a", "b"]}
 
     def test_event_updates_state(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         assert client.presence == {}
 
         client._handle_presence_event(
@@ -325,7 +325,7 @@ class TestPresence:
         assert client.presence == {"clients": ["ha-client"]}
 
     def test_event_with_empty_payload_ignored(self) -> None:
-        client = ClawdGatewayClient("localhost", 1, None)
+        client = OpenClawGatewayClient("localhost", 1, None)
         client._gateway._presence = {"clients": ["existing"]}
 
         client._handle_presence_event({"payload": {}})
