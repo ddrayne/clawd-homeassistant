@@ -127,10 +127,15 @@ class GatewayProtocol:
         while True:
             try:
                 _LOGGER.info("Connecting to Gateway at %s", self._uri)
+                headers = {}
+                if self._token:
+                    headers["Authorization"] = f"Bearer {self._token}"
+                    headers["X-OpenClaw-Token"] = self._token
                 async with connect(
                     self._uri,
                     ping_interval=30,
                     ping_timeout=10,
+                    additional_headers=headers,
                 ) as websocket:
                     self._websocket = websocket
                     try:
