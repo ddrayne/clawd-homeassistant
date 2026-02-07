@@ -52,16 +52,41 @@ This integration lets you access your **entire OpenClaw agent** - with all its s
 
 **Note**: OpenClaw runs on macOS, Windows, and Linux. You'll need to have OpenClaw installed and configured with your desired AI model (Claude, GPT, or local) and any service integrations you want to use before connecting to Home Assistant.
 
-## Upgrading from Clawd (v1.2.x)
+## Upgrading from Clawd v1.2.x to OpenClaw v1.3.0
 
-v1.3.0 renames the integration domain from `clawd` to `openclaw`. This is a breaking change that requires a manual migration:
+Clawd has been renamed to **OpenClaw** (via MoltBot). This integration now uses the `openclaw` domain. This is a breaking change that requires a clean reinstall — there is no automatic migration path.
 
-1. **HACS**: Remove the old "Clawd Voice Assistant" repository from HACS, then re-add `ddrayne/openclaw-homeassistant` as a custom repository and download it
-2. **Integration**: Remove the old integration from **Settings > Devices & Services > Clawd**, then re-add it as "OpenClaw Voice Assistant" with the same connection details
-3. **Delete old files**: Remove the `custom_components/clawd/` directory from your HA config if it wasn't cleaned up automatically
-4. **Restart** Home Assistant
+### Step-by-step upgrade
 
-Your Gateway token and connection settings stay the same — only the HA integration needs to be re-added.
+1. **Remove the old integration**
+   - Go to **Settings > Devices & Services**
+   - Find "Clawd" and click the three dots > **Delete**
+   - Note down your host, port, and token before deleting
+
+2. **Remove old files from HACS**
+   - Open **HACS > Integrations**
+   - Find "Clawd Voice Assistant" and **remove** it (uninstall + remove from custom repositories)
+
+3. **Delete leftover files**
+   - Using SSH, the File Editor add-on, or Samba, delete the `custom_components/clawd/` directory if it still exists
+
+4. **Restart Home Assistant**
+
+5. **Install OpenClaw**
+   - Open **HACS > Integrations > three dots > Custom repositories**
+   - Add `ddrayne/openclaw-homeassistant` as an "Integration"
+   - Download "OpenClaw Voice Assistant"
+   - Restart Home Assistant
+
+6. **Re-add the integration**
+   - Go to **Settings > Devices & Services > Add Integration**
+   - Search for "OpenClaw Voice Assistant"
+   - Enter your Gateway connection details (same host, port, and token as before)
+
+7. **Update automations and dashboards**
+   - Any automations, scripts, or dashboard cards referencing old entity IDs (e.g. `sensor.clawd_*`, `binary_sensor.clawd_*`, `conversation.clawd`) need to be updated to use the new `openclaw` entity IDs
+
+Your Gateway token and connection settings are unchanged — only the Home Assistant side needs to be reinstalled.
 
 ## Installation
 
