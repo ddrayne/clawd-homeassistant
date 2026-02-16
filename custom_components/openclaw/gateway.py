@@ -10,8 +10,6 @@ from typing import Any, Callable
 from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosedError, InvalidStatus
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
 from .const import (
     CHALLENGE_TIMEOUT,
     CLIENT_DISPLAY_NAME,
@@ -19,12 +17,9 @@ from .const import (
     CLIENT_MODE,
     CLIENT_PLATFORM,
     CLIENT_VERSION,
-    DEVICE_ROLE,
-    DEVICE_SCOPES,
     PROTOCOL_MAX_VERSION,
     PROTOCOL_MIN_VERSION,
 )
-from .device_auth import build_device_auth_dict
 from .exceptions import (
     GatewayAuthenticationError,
     GatewayConnectionError,
@@ -43,14 +38,12 @@ class GatewayProtocol:
         port: int,
         token: str | None,
         use_ssl: bool = False,
-        device_key: Ed25519PrivateKey | None = None,
     ) -> None:
         """Initialize the Gateway protocol client."""
         self._host = host
         self._port = port
         self._token = token
         self._use_ssl = use_ssl
-        self._device_key = device_key
 
         # Connection state
         self._websocket: Any | None = None
@@ -78,9 +71,12 @@ class GatewayProtocol:
         self._fatal_error: Exception | None = None
         self._on_fatal_error: Callable[[Exception], None] | None = None
 
-        # Build WebSocket URI
+        # Build WebSocket URI (include token as query param for gateway auth)
         protocol = "wss" if use_ssl else "ws"
-        self._uri = f"{protocol}://{host}:{port}"
+        if token:
+            self._uri = f"{protocol}://{host}:{port}/?token={token}"
+        else:
+            self._uri = f"{protocol}://{host}:{port}"
 
     @property
     def connected(self) -> bool:
@@ -343,23 +339,13 @@ class GatewayProtocol:
         if self._token:
             connect_params["auth"] = {"token": self._token}
 
-        # Add device auth if we received a challenge nonce
-        if nonce and self._device_key:
-            connect_params["role"] = DEVICE_ROLE
-            connect_params["scopes"] = list(DEVICE_SCOPES)
-            connect_params["device"] = build_device_auth_dict(
-                key=self._device_key,
-                client_id=CLIENT_ID,
-                client_mode=CLIENT_MODE,
-                role=DEVICE_ROLE,
-                scopes=DEVICE_SCOPES,
-                token=self._token or "",
-                nonce=nonce,
-            )
-        elif nonce and not self._device_key:
-            _LOGGER.warning(
-                "Gateway sent connect.challenge but no device key is "
-                "configured; device auth will be skipped"
+        # For programmatic integrations, token-only auth is sufficient.
+        # Device credentials trigger the interactive pairing flow which
+        # is intended for chat clients, not backend integrations.
+        if nonce:
+            _LOGGER.debug(
+                "Challenge received; using token-only auth "
+                "(skipping device pairing flow)"
             )
 
         request_id = str(uuid.uuid4())
