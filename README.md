@@ -48,7 +48,7 @@ This integration lets you access your **entire OpenClaw agent** - with all its s
 
 - Home Assistant 2024.1.0 or later
 - A configured [OpenClaw](https://openclaw.ai/) installation with Gateway running (local or remote)
-- Gateway token (for non-localhost connections)
+- Gateway token (required since OpenClaw 2026.2.13+)
 
 **Note**: OpenClaw runs on macOS, Windows, and Linux. You'll need to have OpenClaw installed and configured with your desired AI model (Claude, GPT, or local) and any service integrations you want to use before connecting to Home Assistant.
 
@@ -77,7 +77,7 @@ See [MIGRATION.md](MIGRATION.md) for the step-by-step upgrade guide.
 
 ## Getting a Gateway Token
 
-A Gateway token is required when connecting to OpenClaw from a different machine (non-localhost). The token authenticates your Home Assistant instance with the Gateway.
+A Gateway token is required to authenticate your Home Assistant instance with the Gateway. Since OpenClaw 2026.2.13+, authentication is mandatory for all connections (including localhost).
 
 **Generate a new token:**
 
@@ -117,7 +117,7 @@ This binds the Gateway to your local network interface, allowing connections fro
 4. Enter your Gateway connection details:
    - **Host**: Gateway hostname or IP address (e.g., `gateway.example.com` or `192.168.1.100`)
    - **Port**: Gateway port (default: `18789`)
-   - **Gateway Token**: Your authentication token (leave empty for localhost without authentication)
+   - **Gateway Token**: Your authentication token (required)
    - **Use SSL**: Check this for `wss://` connections (recommended for remote connections)
    - **Agent Timeout**: Maximum time to wait for agent response in seconds (default: 30)
    - **Session Key**: OpenClaw session to use (default: `main` - the standard direct-chat session)
@@ -204,7 +204,7 @@ ssh -N -L 18789:localhost:18789 user@gateway-host
 Then configure the integration:
 - Host: `127.0.0.1`
 - Port: `18789`
-- Gateway Token: (Optional)
+- Gateway Token: Required
 
 ## Troubleshooting
 
@@ -219,7 +219,7 @@ Then configure the integration:
 **Authentication failed:**
 - Verify your token is correct
 - Check Gateway token configuration: `echo $OPENCLAW_GATEWAY_TOKEN`
-- For localhost connections without a token, leave the token field empty
+- Generate a new token if needed: `openclaw doctor --generate-gateway-token`
 
 **Response timeout:**
 - Agent execution is taking longer than the configured timeout (default: 30 seconds)
