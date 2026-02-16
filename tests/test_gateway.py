@@ -308,9 +308,9 @@ class TestChallengeHandshake:
 
         connect_params = protocol._websocket.sent[0]["params"]
         assert connect_params["auth"] == {"token": "tok"}
+        assert connect_params["role"] == "operator"
+        assert connect_params["scopes"] == ["operator.read", "operator.write"]
         assert "device" not in connect_params
-        assert "role" not in connect_params
-        assert "scopes" not in connect_params
 
     @pytest.mark.asyncio
     async def test_no_challenge_falls_back_to_legacy(self) -> None:

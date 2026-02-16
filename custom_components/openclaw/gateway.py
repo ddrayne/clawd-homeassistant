@@ -17,6 +17,8 @@ from .const import (
     CLIENT_MODE,
     CLIENT_PLATFORM,
     CLIENT_VERSION,
+    DEVICE_ROLE,
+    DEVICE_SCOPES,
     PROTOCOL_MAX_VERSION,
     PROTOCOL_MIN_VERSION,
 )
@@ -339,9 +341,13 @@ class GatewayProtocol:
         if self._token:
             connect_params["auth"] = {"token": self._token}
 
-        # For programmatic integrations, token-only auth is sufficient.
-        # Device credentials trigger the interactive pairing flow which
-        # is intended for chat clients, not backend integrations.
+        # Role and scopes are required for the gateway to grant permissions.
+        # Device credentials are intentionally omitted — they trigger the
+        # interactive pairing flow intended for chat clients, not backend
+        # integrations.  Token-only auth is sufficient for programmatic use.
+        connect_params["role"] = DEVICE_ROLE
+        connect_params["scopes"] = DEVICE_SCOPES
+
         if nonce:
             _LOGGER.debug(
                 "Challenge received; using token-only auth "
