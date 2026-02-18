@@ -172,7 +172,8 @@ class OpenClawConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             try:
                 info = await validate_connection(self.hass, user_input)
-            except GatewayAuthenticationError:
+            except GatewayAuthenticationError as err:
+                _LOGGER.warning("Authentication failed: %s", err)
                 errors["base"] = "invalid_auth"
             except GatewayTimeoutError:
                 errors["base"] = "timeout"
@@ -276,7 +277,8 @@ class OpenClawConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             test_data = {**existing, **user_input}
             try:
                 await validate_connection(self.hass, test_data)
-            except GatewayAuthenticationError:
+            except GatewayAuthenticationError as err:
+                _LOGGER.warning("Authentication failed during reauth: %s", err)
                 errors["base"] = "invalid_auth"
             except GatewayTimeoutError:
                 errors["base"] = "timeout"
@@ -352,7 +354,8 @@ class OpenClawOptionsFlowHandler(config_entries.OptionsFlow):
             try:
                 # Validate new settings
                 await validate_connection(self.hass, user_input)
-            except GatewayAuthenticationError:
+            except GatewayAuthenticationError as err:
+                _LOGGER.warning("Authentication failed: %s", err)
                 errors["base"] = "invalid_auth"
             except GatewayTimeoutError:
                 errors["base"] = "timeout"
