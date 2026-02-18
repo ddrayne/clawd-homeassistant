@@ -46,7 +46,6 @@ async def validate_connection(
 ) -> dict[str, Any]:
     """Validate the Gateway connection."""
     client = OpenClawGatewayClient(
-        hass=hass,
         host=data[CONF_HOST],
         port=data[CONF_PORT],
         token=data.get(CONF_TOKEN),

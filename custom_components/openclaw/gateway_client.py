@@ -119,12 +119,9 @@ class OpenClawGatewayClient:
         session_key: str = "main",
         model: str | None = None,
         thinking: str | None = None,
-        hass: Any | None = None,
     ) -> None:
         """Initialize the Gateway client."""
-        self._gateway = GatewayProtocol(
-            host, port, token, use_ssl, hass=hass
-        )
+        self._gateway = GatewayProtocol(host, port, token, use_ssl)
         self._timeout = timeout
         self._session_key = session_key
         self._model = model

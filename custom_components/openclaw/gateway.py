@@ -22,7 +22,6 @@ from .const import (
     PROTOCOL_MAX_VERSION,
     PROTOCOL_MIN_VERSION,
 )
-from .device_auth import async_load_or_create_keypair, build_device_auth_dict
 from .exceptions import (
     GatewayAuthenticationError,
     GatewayConnectionError,
@@ -41,10 +40,8 @@ class GatewayProtocol:
         port: int,
         token: str | None,
         use_ssl: bool = False,
-        hass: Any | None = None,
     ) -> None:
         """Initialize the Gateway protocol client."""
-        self._hass = hass
         self._host = host
         self._port = port
         self._token = token
@@ -345,32 +342,17 @@ class GatewayProtocol:
             connect_params["auth"] = {"token": self._token}
 
         # Role and scopes are required for the gateway to grant permissions.
+        # Device credentials are intentionally omitted — they trigger the
+        # interactive pairing flow intended for chat clients, not backend
+        # integrations.  Token-only auth is sufficient for programmatic use.
         connect_params["role"] = DEVICE_ROLE
         connect_params["scopes"] = DEVICE_SCOPES
 
         if nonce:
-            try:
-                if not self._hass:
-                    raise RuntimeError("Home Assistant instance not available")
-                key = await async_load_or_create_keypair(self._hass)
-                connect_params["device"] = build_device_auth_dict(
-                    key=key,
-                    client_id=CLIENT_ID,
-                    client_mode=CLIENT_MODE,
-                    role=DEVICE_ROLE,
-                    scopes=DEVICE_SCOPES,
-                    token=self._token or "",
-                    nonce=nonce,
-                )
-                _LOGGER.debug(
-                    "Challenge received; including device auth proof"
-                )
-            except Exception as err:  # pylint: disable=broad-except
-                _LOGGER.warning(
-                    "Failed to build device auth proof, falling back to "
-                    "token-only connect: %s",
-                    err,
-                )
+            _LOGGER.debug(
+                "Challenge received; using token-only auth "
+                "(skipping device pairing flow)"
+            )
 
         request_id = str(uuid.uuid4())
         connect_request = {
@@ -418,13 +400,13 @@ class GatewayProtocol:
             if not response.get("ok"):
                 error_msg = response.get("error", "Unknown error")
                 error_str = str(error_msg) if not isinstance(error_msg, str) else error_msg
-                if "auth" in error_str.lower() or "token" in error_str.lower():
+                error_lower = error_str.lower()
+                if any(
+                    kw in error_lower
+                    for kw in ("auth", "token", "nonce", "device", "pair")
+                ):
                     raise GatewayAuthenticationError(
                         f"Authentication failed: {error_msg}"
-                    )
-                if "nonce" in error_str.lower() or "device" in error_str.lower():
-                    raise GatewayAuthenticationError(
-                        f"Device authentication failed: {error_msg}"
                     )
                 raise ProtocolError(f"Connection failed: {error_msg}")
 
