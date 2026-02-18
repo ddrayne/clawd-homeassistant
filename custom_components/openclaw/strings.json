@@ -12,6 +12,10 @@
           "timeout": "Agent Timeout (seconds)"
         }
       },
+      "pairing": {
+        "title": "Device Approval Required",
+        "description": "A new device has been registered with your OpenClaw Gateway and needs to be approved before it can connect.\n\nPlease approve it in the OpenClaw CLI or Control UI, then click Submit to continue.\n\nIf your OpenClaw instance is on the same machine (localhost), this should be approved automatically."
+      },
       "session": {
         "title": "Session and Speech",
         "description": "Choose a session and speech options",
@@ -37,6 +41,8 @@
     "error": {
       "cannot_connect": "Failed to connect to Gateway",
       "invalid_auth": "Authentication failed - invalid token",
+      "pairing_not_approved": "Device not yet approved in OpenClaw. Approve it, then try again.",
+      "pairing_required": "Device approval required. Approve this device in OpenClaw, then retry.",
       "timeout": "Connection timeout",
       "unknown": "Unexpected error occurred"
     },
@@ -69,6 +75,10 @@
     "gateway_auth_failed": {
       "title": "Gateway authentication failed",
       "description": "The OpenClaw Gateway token is no longer valid. Update your token in Settings > Devices & Services > OpenClaw > Configure."
+    },
+    "device_pairing_required": {
+      "title": "Device approval required",
+      "description": "This Home Assistant device needs to be approved in OpenClaw before it can connect. Approve it using the OpenClaw CLI or Control UI, then reload the integration."
     }
   }
 }

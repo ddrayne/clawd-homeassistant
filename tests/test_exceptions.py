@@ -20,6 +20,7 @@ _spec.loader.exec_module(_exceptions)
 OpenClawError = _exceptions.OpenClawError
 GatewayConnectionError = _exceptions.GatewayConnectionError
 GatewayAuthenticationError = _exceptions.GatewayAuthenticationError
+DevicePairingRequiredError = _exceptions.DevicePairingRequiredError
 GatewayTimeoutError = _exceptions.GatewayTimeoutError
 AgentExecutionError = _exceptions.AgentExecutionError
 ProtocolError = _exceptions.ProtocolError
@@ -28,6 +29,7 @@ ProtocolError = _exceptions.ProtocolError
 SUBCLASS_EXCEPTIONS = [
     GatewayConnectionError,
     GatewayAuthenticationError,
+    DevicePairingRequiredError,
     GatewayTimeoutError,
     AgentExecutionError,
     ProtocolError,
@@ -42,3 +44,9 @@ class TestExceptionHierarchy:
     )
     def test_inherits_from_openclaw_error(self, exception_class) -> None:
         assert issubclass(exception_class, OpenClawError)
+
+    def test_device_pairing_is_auth_error(self) -> None:
+        """DevicePairingRequiredError is a subclass of GatewayAuthenticationError."""
+        assert issubclass(DevicePairingRequiredError, GatewayAuthenticationError)
+        err = DevicePairingRequiredError("pairing required")
+        assert isinstance(err, GatewayAuthenticationError)

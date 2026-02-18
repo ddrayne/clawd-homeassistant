@@ -31,6 +31,7 @@ _gateway_client = _load_module(
 )
 
 AgentExecutionError = _exceptions.AgentExecutionError
+DevicePairingRequiredError = _exceptions.DevicePairingRequiredError
 GatewayAuthenticationError = _exceptions.GatewayAuthenticationError
 GatewayConnectionError = _exceptions.GatewayConnectionError
 GatewayTimeoutError = _exceptions.GatewayTimeoutError
@@ -268,6 +269,17 @@ class TestConnect:
         # _connected_event never set, so wait_for will time out
 
         with pytest.raises(GatewayAuthenticationError):
+            await client.connect()
+
+    @pytest.mark.asyncio
+    async def test_connect_raises_on_pairing_error(self) -> None:
+        """DevicePairingRequiredError propagates through connect()."""
+        client = OpenClawGatewayClient("localhost", 1, "tok")
+        pairing_err = DevicePairingRequiredError("not paired")
+        client._gateway._fatal_error = pairing_err
+        client._gateway.connect = AsyncMock()  # type: ignore[attr-defined]
+
+        with pytest.raises(DevicePairingRequiredError):
             await client.connect()
 
     @pytest.mark.asyncio

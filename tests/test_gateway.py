@@ -28,6 +28,7 @@ _const = _load_module("custom_components.openclaw.const", _BASE / "const.py")
 _exceptions = _load_module("custom_components.openclaw.exceptions", _BASE / "exceptions.py")
 _gateway = _load_module("custom_components.openclaw.gateway", _BASE / "gateway.py")
 
+DevicePairingRequiredError = _exceptions.DevicePairingRequiredError
 GatewayAuthenticationError = _exceptions.GatewayAuthenticationError
 GatewayConnectionError = _exceptions.GatewayConnectionError
 ProtocolError = _exceptions.ProtocolError
@@ -337,7 +338,8 @@ class TestChallengeHandshake:
         assert connect_params["auth"] == {"token": "tok"}
 
     @pytest.mark.asyncio
-    async def test_not_paired_error_raises_protocol_error(self) -> None:
+    async def test_nonce_mismatch_raises_auth_error(self) -> None:
+        """Device nonce mismatch raises GatewayAuthenticationError."""
         challenge = {
             "type": "event",
             "event": "connect.challenge",
@@ -357,6 +359,97 @@ class TestChallengeHandshake:
 
         with pytest.raises(GatewayAuthenticationError, match="device"):
             await protocol._handshake()
+
+    @pytest.mark.asyncio
+    async def test_not_paired_raises_pairing_error(self) -> None:
+        """NOT_PAIRED error raises DevicePairingRequiredError."""
+        challenge = {
+            "type": "event",
+            "event": "connect.challenge",
+            "payload": {"nonce": "test-nonce", "ts": 1700000000},
+        }
+
+        def error_response(sent):
+            return {
+                "type": "res",
+                "id": sent[-1]["id"],
+                "ok": False,
+                "error": {
+                    "code": "NOT_PAIRED",
+                    "message": "pairing required",
+                },
+            }
+
+        protocol = GatewayProtocol("localhost", 1, "tok")
+        protocol._websocket = DummyWebSocket([challenge, error_response])
+
+        with pytest.raises(DevicePairingRequiredError, match="pairing"):
+            await protocol._handshake()
+
+    @pytest.mark.asyncio
+    async def test_device_credentials_included_when_hass_provided(
+        self, monkeypatch
+    ) -> None:
+        """When hass is available and nonce received, device credentials are included."""
+        _device_auth = sys.modules["custom_components.openclaw.device_auth"]
+        key = _device_auth.generate_keypair()
+        monkeypatch.setattr(
+            _gateway,
+            "async_load_or_create_keypair",
+            AsyncMock(return_value=key),
+        )
+
+        challenge = {
+            "type": "event",
+            "event": "connect.challenge",
+            "payload": {"nonce": "test-nonce", "ts": 1700000000},
+        }
+
+        def ok_response(sent):
+            return {
+                "type": "res",
+                "id": sent[-1]["id"],
+                "ok": True,
+                "payload": {},
+            }
+
+        mock_hass = object()
+        protocol = GatewayProtocol("localhost", 1, "tok", hass=mock_hass)
+        protocol._websocket = DummyWebSocket([challenge, ok_response])
+
+        await protocol._handshake()
+
+        connect_params = protocol._websocket.sent[0]["params"]
+        assert "device" in connect_params
+        assert "id" in connect_params["device"]
+        assert "publicKey" in connect_params["device"]
+        assert "signature" in connect_params["device"]
+        assert connect_params["device"]["nonce"] == "test-nonce"
+
+    @pytest.mark.asyncio
+    async def test_no_device_credentials_without_hass(self) -> None:
+        """Without hass, device credentials are omitted even with a nonce."""
+        challenge = {
+            "type": "event",
+            "event": "connect.challenge",
+            "payload": {"nonce": "test-nonce", "ts": 1700000000},
+        }
+
+        def ok_response(sent):
+            return {
+                "type": "res",
+                "id": sent[-1]["id"],
+                "ok": True,
+                "payload": {},
+            }
+
+        protocol = GatewayProtocol("localhost", 1, "tok")  # No hass
+        protocol._websocket = DummyWebSocket([challenge, ok_response])
+
+        await protocol._handshake()
+
+        connect_params = protocol._websocket.sent[0]["params"]
+        assert "device" not in connect_params
 
     @pytest.mark.asyncio
     async def test_token_in_uri_query_param(self) -> None:

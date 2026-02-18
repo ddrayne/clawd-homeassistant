@@ -29,6 +29,7 @@ from .const import (
     DOMAIN,
 )
 from .exceptions import (
+    DevicePairingRequiredError,
     GatewayAuthenticationError,
     GatewayConnectionError,
     GatewayTimeoutError,
@@ -80,6 +81,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Create Gateway client with config from entry.data
     gateway_client = OpenClawGatewayClient(
+        hass=hass,
         host=entry.data[CONF_HOST],
         port=entry.data[CONF_PORT],
         token=options.get(CONF_TOKEN, entry.data.get(CONF_TOKEN)),
@@ -116,7 +118,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Register runtime fatal error callback for repair issues
     def _on_fatal_error(err: Exception) -> None:
-        if isinstance(err, GatewayAuthenticationError):
+        if isinstance(err, DevicePairingRequiredError):
+            async_create_issue(
+                hass,
+                DOMAIN,
+                "device_pairing_required",
+                is_fixable=False,
+                severity=IssueSeverity.WARNING,
+                translation_key="device_pairing_required",
+            )
+        elif isinstance(err, GatewayAuthenticationError):
             async_create_issue(
                 hass,
                 DOMAIN,

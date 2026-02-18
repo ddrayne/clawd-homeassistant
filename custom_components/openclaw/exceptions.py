@@ -13,6 +13,10 @@ class GatewayAuthenticationError(OpenClawError):
     """Authentication failed - invalid token."""
 
 
+class DevicePairingRequiredError(GatewayAuthenticationError):
+    """Device is registered but not yet approved in OpenClaw."""
+
+
 class GatewayTimeoutError(OpenClawError):
     """Request timeout - Gateway or agent took too long."""
 

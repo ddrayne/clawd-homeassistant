@@ -22,7 +22,9 @@ from .const import (
     PROTOCOL_MAX_VERSION,
     PROTOCOL_MIN_VERSION,
 )
+from .device_auth import async_load_or_create_keypair, build_device_auth_dict
 from .exceptions import (
+    DevicePairingRequiredError,
     GatewayAuthenticationError,
     GatewayConnectionError,
     ProtocolError,
@@ -40,8 +42,10 @@ class GatewayProtocol:
         port: int,
         token: str | None,
         use_ssl: bool = False,
+        hass: Any | None = None,
     ) -> None:
         """Initialize the Gateway protocol client."""
+        self._hass = hass
         self._host = host
         self._port = port
         self._token = token
@@ -178,14 +182,22 @@ class GatewayProtocol:
 
                     except GatewayAuthenticationError as err:
                         self._fatal_error = err
-                        _LOGGER.error(
-                            "Gateway authentication failed. Check that the "
-                            "token in Settings > Devices & Services > OpenClaw "
-                            "> Configure matches your gateway token "
-                            "(openclaw doctor --generate-gateway-token). "
-                            "Detail: %s",
-                            err,
-                        )
+                        if isinstance(err, DevicePairingRequiredError):
+                            _LOGGER.warning(
+                                "Device not yet approved in OpenClaw. "
+                                "Approve this device in the OpenClaw CLI "
+                                "or Control UI. Detail: %s",
+                                err,
+                            )
+                        else:
+                            _LOGGER.error(
+                                "Gateway authentication failed. Check that "
+                                "the token in Settings > Devices & Services "
+                                "> OpenClaw > Configure matches your gateway "
+                                "token (openclaw doctor "
+                                "--generate-gateway-token). Detail: %s",
+                                err,
+                            )
                         if self._on_fatal_error:
                             self._on_fatal_error(err)
                         # Return instead of raise: re-raising inside
@@ -342,16 +354,27 @@ class GatewayProtocol:
             connect_params["auth"] = {"token": self._token}
 
         # Role and scopes are required for the gateway to grant permissions.
-        # Device credentials are intentionally omitted — they trigger the
-        # interactive pairing flow intended for chat clients, not backend
-        # integrations.  Token-only auth is sufficient for programmatic use.
         connect_params["role"] = DEVICE_ROLE
         connect_params["scopes"] = DEVICE_SCOPES
 
-        if nonce:
+        # Include device credentials when a challenge nonce is received
+        # and hass is available for keypair storage.
+        if nonce and self._hass:
+            key = await async_load_or_create_keypair(self._hass)
+            connect_params["device"] = build_device_auth_dict(
+                key=key,
+                client_id=CLIENT_ID,
+                client_mode=CLIENT_MODE,
+                role=DEVICE_ROLE,
+                scopes=DEVICE_SCOPES,
+                token=self._token or "",
+                nonce=nonce,
+            )
+            _LOGGER.debug("Including device credentials in connect request")
+        elif nonce:
             _LOGGER.debug(
-                "Challenge received; using token-only auth "
-                "(skipping device pairing flow)"
+                "Challenge received but no hass context; "
+                "using token-only auth"
             )
 
         request_id = str(uuid.uuid4())
@@ -401,6 +424,16 @@ class GatewayProtocol:
                 error_msg = response.get("error", "Unknown error")
                 error_str = str(error_msg) if not isinstance(error_msg, str) else error_msg
                 error_lower = error_str.lower()
+
+                # Detect NOT_PAIRED specifically before generic auth errors
+                error_code = None
+                if isinstance(error_msg, dict):
+                    error_code = error_msg.get("code")
+                if error_code == "NOT_PAIRED" or "not_paired" in error_lower:
+                    raise DevicePairingRequiredError(
+                        f"Device pairing required: {error_msg}"
+                    )
+
                 if any(
                     kw in error_lower
                     for kw in ("auth", "token", "nonce", "device", "pair")

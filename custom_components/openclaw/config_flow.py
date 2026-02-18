@@ -32,6 +32,7 @@ from .const import (
     DOMAIN,
 )
 from .exceptions import (
+    DevicePairingRequiredError,
     GatewayAuthenticationError,
     GatewayConnectionError,
     GatewayTimeoutError,
@@ -46,6 +47,7 @@ async def validate_connection(
 ) -> dict[str, Any]:
     """Validate the Gateway connection."""
     client = OpenClawGatewayClient(
+        hass=hass,
         host=data[CONF_HOST],
         port=data[CONF_PORT],
         token=data.get(CONF_TOKEN),
@@ -172,6 +174,13 @@ class OpenClawConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             try:
                 info = await validate_connection(self.hass, user_input)
+            except DevicePairingRequiredError:
+                _LOGGER.info("Device pairing required — showing approval step")
+                self._config_data = user_input
+                self._config_title = (
+                    f"OpenClaw Gateway ({user_input[CONF_HOST]})"
+                )
+                return await self.async_step_pairing()
             except GatewayAuthenticationError as err:
                 _LOGGER.warning("Authentication failed: %s", err)
                 errors["base"] = "invalid_auth"
@@ -206,6 +215,40 @@ class OpenClawConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user", data_schema=data_schema, errors=errors
+        )
+
+    async def async_step_pairing(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle device pairing approval step."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            # User clicked Submit — retry the connection
+            try:
+                info = await validate_connection(
+                    self.hass, self._config_data
+                )
+            except DevicePairingRequiredError:
+                errors["base"] = "pairing_not_approved"
+            except GatewayAuthenticationError as err:
+                _LOGGER.warning("Authentication failed after pairing: %s", err)
+                errors["base"] = "invalid_auth"
+            except GatewayTimeoutError:
+                errors["base"] = "timeout"
+            except GatewayConnectionError:
+                errors["base"] = "cannot_connect"
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception during pairing retry")
+                errors["base"] = "unknown"
+            else:
+                self._config_title = info["title"]
+                return await self.async_step_session()
+
+        return self.async_show_form(
+            step_id="pairing",
+            data_schema=vol.Schema({}),
+            errors=errors,
         )
 
     async def async_step_session(
@@ -277,6 +320,9 @@ class OpenClawConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             test_data = {**existing, **user_input}
             try:
                 await validate_connection(self.hass, test_data)
+            except DevicePairingRequiredError:
+                _LOGGER.info("Device pairing required during reauth")
+                errors["base"] = "pairing_required"
             except GatewayAuthenticationError as err:
                 _LOGGER.warning("Authentication failed during reauth: %s", err)
                 errors["base"] = "invalid_auth"
@@ -354,6 +400,9 @@ class OpenClawOptionsFlowHandler(config_entries.OptionsFlow):
             try:
                 # Validate new settings
                 await validate_connection(self.hass, user_input)
+            except DevicePairingRequiredError:
+                _LOGGER.info("Device pairing required during options update")
+                errors["base"] = "pairing_required"
             except GatewayAuthenticationError as err:
                 _LOGGER.warning("Authentication failed: %s", err)
                 errors["base"] = "invalid_auth"
