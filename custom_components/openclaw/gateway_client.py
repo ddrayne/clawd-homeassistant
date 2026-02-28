@@ -234,13 +234,14 @@ class OpenClawGatewayClient:
                 options["model"] = self._model
             if self._thinking:
                 options["thinking"] = self._thinking
+
             response = await self._gateway.send_request(
                 method="agent",
                 params={
                     "message": message,
                     "sessionKey": self._session_key,
                     "idempotencyKey": idempotency_key,
-                    **({"options": options} if options else {}),
+                    **options,
                 },
                 timeout=10.0,  # Initial ack should be quick
             )
@@ -334,13 +335,14 @@ class OpenClawGatewayClient:
                 options["model"] = self._model
             if self._thinking:
                 options["thinking"] = self._thinking
+
             response = await self._gateway.send_request(
                 method="agent",
                 params={
                     "message": message,
                     "sessionKey": self._session_key,
                     "idempotencyKey": idempotency_key,
-                    **({"options": options} if options else {}),
+                    **options,
                 },
                 timeout=10.0,
             )

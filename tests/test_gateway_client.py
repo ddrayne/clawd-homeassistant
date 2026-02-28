@@ -153,6 +153,66 @@ class TestSendAgentRequest:
         client._gateway.send_request.assert_called_once()  # type: ignore[attr-defined]
         params = client._gateway.send_request.call_args.kwargs["params"]  # type: ignore[attr-defined]
         assert params["idempotencyKey"] == "fixed"
+        assert "options" not in params
+
+    @pytest.mark.asyncio
+    async def test_thinking_sent_as_root_param(self) -> None:
+        client = OpenClawGatewayClient("localhost", 1, None, thinking="high")
+        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
+            return_value={"payload": {"runId": "run-1"}}
+        )
+
+        task = asyncio.create_task(client.send_agent_request("hello"))
+
+        for _ in range(50):
+            if "run-1" in client._agent_runs:
+                break
+            await asyncio.sleep(0)
+        assert "run-1" in client._agent_runs
+
+        client._handle_agent_event(
+            {"payload": {"runId": "run-1", "status": "ok", "summary": "done"}}
+        )
+
+        result = await task
+        assert result == "done"
+
+        params = client._gateway.send_request.call_args.kwargs["params"]  # type: ignore[attr-defined]
+        assert params["thinking"] == "high"
+        assert "options" not in params
+
+    @pytest.mark.asyncio
+    async def test_model_and_thinking_sent_as_root_params(self) -> None:
+        client = OpenClawGatewayClient(
+            "localhost",
+            1,
+            None,
+            model="anthropic/claude-sonnet-4-5",
+            thinking="medium",
+        )
+        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
+            return_value={"payload": {"runId": "run-1"}}
+        )
+
+        task = asyncio.create_task(client.send_agent_request("hello"))
+
+        for _ in range(50):
+            if "run-1" in client._agent_runs:
+                break
+            await asyncio.sleep(0)
+        assert "run-1" in client._agent_runs
+
+        client._handle_agent_event(
+            {"payload": {"runId": "run-1", "status": "ok", "summary": "done"}}
+        )
+
+        result = await task
+        assert result == "done"
+
+        params = client._gateway.send_request.call_args.kwargs["params"]  # type: ignore[attr-defined]
+        assert params["model"] == "anthropic/claude-sonnet-4-5"
+        assert params["thinking"] == "medium"
+        assert "options" not in params
 
     @pytest.mark.asyncio
     async def test_status_error_raises(self) -> None:
@@ -240,6 +300,82 @@ class TestStreamAgentRequest:
         client._gateway.send_request.assert_called_once()  # type: ignore[attr-defined]
         params = client._gateway.send_request.call_args.kwargs["params"]  # type: ignore[attr-defined]
         assert params["idempotencyKey"] == "fixed"
+        assert "options" not in params
+
+    @pytest.mark.asyncio
+    async def test_stream_thinking_sent_as_root_param(self) -> None:
+        client = OpenClawGatewayClient("localhost", 1, None, thinking="medium")
+        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
+            return_value={"payload": {"runId": "run-1"}}
+        )
+
+        chunks: list[str] = []
+
+        async def consume():
+            async for chunk in client.stream_agent_request("hello"):
+                chunks.append(chunk)
+
+        task = asyncio.create_task(consume())
+
+        for _ in range(50):
+            if "run-1" in client._agent_runs:
+                break
+            await asyncio.sleep(0)
+        assert "run-1" in client._agent_runs
+
+        client._handle_agent_event(
+            {"payload": {"runId": "run-1", "output": "done"}}
+        )
+        client._handle_agent_event(
+            {"payload": {"runId": "run-1", "status": "ok"}}
+        )
+        await task
+        assert chunks == ["done"]
+
+        params = client._gateway.send_request.call_args.kwargs["params"]  # type: ignore[attr-defined]
+        assert params["thinking"] == "medium"
+        assert "options" not in params
+
+    @pytest.mark.asyncio
+    async def test_stream_model_and_thinking_sent_as_root_params(self) -> None:
+        client = OpenClawGatewayClient(
+            "localhost",
+            1,
+            None,
+            model="anthropic/claude-opus-4-5",
+            thinking="low",
+        )
+        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
+            return_value={"payload": {"runId": "run-1"}}
+        )
+
+        chunks: list[str] = []
+
+        async def consume():
+            async for chunk in client.stream_agent_request("hello"):
+                chunks.append(chunk)
+
+        task = asyncio.create_task(consume())
+
+        for _ in range(50):
+            if "run-1" in client._agent_runs:
+                break
+            await asyncio.sleep(0)
+        assert "run-1" in client._agent_runs
+
+        client._handle_agent_event(
+            {"payload": {"runId": "run-1", "output": "done"}}
+        )
+        client._handle_agent_event(
+            {"payload": {"runId": "run-1", "status": "ok"}}
+        )
+        await task
+        assert chunks == ["done"]
+
+        params = client._gateway.send_request.call_args.kwargs["params"]  # type: ignore[attr-defined]
+        assert params["model"] == "anthropic/claude-opus-4-5"
+        assert params["thinking"] == "low"
+        assert "options" not in params
 
     @pytest.mark.asyncio
     async def test_stream_timeout_raises_and_cleans_up(self) -> None:
