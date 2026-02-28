@@ -120,6 +120,7 @@ class OpenClawConversationEntity(conversation.ConversationEntity):
             "port": data.get("port"),
             "use_ssl": data.get("use_ssl"),
             "session_key": self._gateway_client.session_key,
+            "agent_id": self._gateway_client.agent_id,
             "model": self._gateway_client.model,
             "thinking": self._gateway_client.thinking,
             "strip_emojis": data.get(CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS),

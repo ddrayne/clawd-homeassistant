@@ -12,6 +12,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue, async_delete_issue
 
 from .const import (
+    CONF_AGENT_ID,
     CONF_MODEL,
     CONF_SESSION_KEY,
     CONF_STRIP_EMOJIS,
@@ -19,6 +20,7 @@ from .const import (
     CONF_TIMEOUT,
     CONF_TTS_MAX_CHARS,
     CONF_USE_SSL,
+    DEFAULT_AGENT_ID,
     DEFAULT_MODEL,
     DEFAULT_SESSION_KEY,
     DEFAULT_STRIP_EMOJIS,
@@ -56,6 +58,7 @@ _OPTION_KEYS = {
     CONF_USE_SSL,
     CONF_TIMEOUT,
     CONF_SESSION_KEY,
+    CONF_AGENT_ID,
     CONF_MODEL,
     CONF_THINKING,
     CONF_STRIP_EMOJIS,
@@ -94,6 +97,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         session_key=options.get(
             CONF_SESSION_KEY,
             entry.data.get(CONF_SESSION_KEY, DEFAULT_SESSION_KEY),
+        ),
+        agent_id=options.get(
+            CONF_AGENT_ID, entry.data.get(CONF_AGENT_ID, DEFAULT_AGENT_ID)
         ),
         model=options.get(CONF_MODEL, entry.data.get(CONF_MODEL, DEFAULT_MODEL)),
         thinking=options.get(
