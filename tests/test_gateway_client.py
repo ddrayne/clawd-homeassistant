@@ -182,15 +182,16 @@ class TestSendAgentRequest:
         assert "options" not in params
 
     @pytest.mark.asyncio
-    async def test_model_patch_sent_before_agent_request(self) -> None:
+    async def test_model_and_thinking_sent_as_root_params(self) -> None:
         client = OpenClawGatewayClient(
-            "localhost", 1, None, model="anthropic/claude-sonnet-4-5"
+            "localhost",
+            1,
+            None,
+            model="anthropic/claude-sonnet-4-5",
+            thinking="medium",
         )
         client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
-            side_effect=[
-                {"payload": {}},
-                {"payload": {"runId": "run-1"}},
-            ]
+            return_value={"payload": {"runId": "run-1"}}
         )
 
         task = asyncio.create_task(client.send_agent_request("hello"))
@@ -208,175 +209,10 @@ class TestSendAgentRequest:
         result = await task
         assert result == "done"
 
-        assert client._gateway.send_request.await_count == 2  # type: ignore[attr-defined]
-        first = client._gateway.send_request.call_args_list[0].kwargs  # type: ignore[attr-defined]
-        second = client._gateway.send_request.call_args_list[1].kwargs  # type: ignore[attr-defined]
-
-        assert first["method"] == "sessions.patch"
-        assert first["params"] == {
-            "sessionKey": "main",
-            "updates": {"model": "anthropic/claude-sonnet-4-5"},
-        }
-        assert second["method"] == "agent"
-        assert "options" not in second["params"]
-
-    @pytest.mark.asyncio
-    async def test_model_patch_soft_fail_still_sends_agent(self) -> None:
-        client = OpenClawGatewayClient(
-            "localhost", 1, None, model="anthropic/claude-sonnet-4-5"
-        )
-        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
-            side_effect=[
-                GatewayConnectionError("patch failed"),
-                {"payload": {"runId": "run-1"}},
-            ]
-        )
-
-        task = asyncio.create_task(client.send_agent_request("hello"))
-
-        for _ in range(50):
-            if "run-1" in client._agent_runs:
-                break
-            await asyncio.sleep(0)
-        assert "run-1" in client._agent_runs
-
-        client._handle_agent_event(
-            {"payload": {"runId": "run-1", "status": "ok", "summary": "done"}}
-        )
-
-        result = await task
-        assert result == "done"
-
-        assert client._gateway.send_request.await_count == 2  # type: ignore[attr-defined]
-        second = client._gateway.send_request.call_args_list[1].kwargs  # type: ignore[attr-defined]
-        assert second["method"] == "agent"
-
-    @pytest.mark.asyncio
-    async def test_model_patch_cached_between_requests(self) -> None:
-        client = OpenClawGatewayClient(
-            "localhost", 1, None, model="anthropic/claude-sonnet-4-5"
-        )
-        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
-            side_effect=[
-                {"payload": {}},
-                {"payload": {"runId": "run-1"}},
-                {"payload": {"runId": "run-2"}},
-            ]
-        )
-
-        first = asyncio.create_task(client.send_agent_request("hello-1"))
-        for _ in range(50):
-            if "run-1" in client._agent_runs:
-                break
-            await asyncio.sleep(0)
-        assert "run-1" in client._agent_runs
-        client._handle_agent_event(
-            {"payload": {"runId": "run-1", "status": "ok", "summary": "done-1"}}
-        )
-        assert await first == "done-1"
-
-        second = asyncio.create_task(client.send_agent_request("hello-2"))
-        for _ in range(50):
-            if "run-2" in client._agent_runs:
-                break
-            await asyncio.sleep(0)
-        assert "run-2" in client._agent_runs
-        client._handle_agent_event(
-            {"payload": {"runId": "run-2", "status": "ok", "summary": "done-2"}}
-        )
-        assert await second == "done-2"
-
-        methods = [
-            call.kwargs["method"]
-            for call in client._gateway.send_request.call_args_list  # type: ignore[attr-defined]
-        ]
-        assert methods == ["sessions.patch", "agent", "agent"]
-
-    @pytest.mark.asyncio
-    async def test_model_patch_reapplies_after_session_change(self) -> None:
-        client = OpenClawGatewayClient(
-            "localhost", 1, None, model="anthropic/claude-sonnet-4-5"
-        )
-        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
-            side_effect=[
-                {"payload": {}},
-                {"payload": {"runId": "run-1"}},
-                {"payload": {}},
-                {"payload": {"runId": "run-2"}},
-            ]
-        )
-
-        first = asyncio.create_task(client.send_agent_request("hello-1"))
-        for _ in range(50):
-            if "run-1" in client._agent_runs:
-                break
-            await asyncio.sleep(0)
-        assert "run-1" in client._agent_runs
-        client._handle_agent_event(
-            {"payload": {"runId": "run-1", "status": "ok", "summary": "done-1"}}
-        )
-        assert await first == "done-1"
-
-        client.set_session_key("voice-assistant")
-
-        second = asyncio.create_task(client.send_agent_request("hello-2"))
-        for _ in range(50):
-            if "run-2" in client._agent_runs:
-                break
-            await asyncio.sleep(0)
-        assert "run-2" in client._agent_runs
-        client._handle_agent_event(
-            {"payload": {"runId": "run-2", "status": "ok", "summary": "done-2"}}
-        )
-        assert await second == "done-2"
-
-        first_patch = client._gateway.send_request.call_args_list[0].kwargs  # type: ignore[attr-defined]
-        second_patch = client._gateway.send_request.call_args_list[2].kwargs  # type: ignore[attr-defined]
-        assert first_patch["method"] == "sessions.patch"
-        assert second_patch["method"] == "sessions.patch"
-        assert first_patch["params"]["sessionKey"] == "main"
-        assert second_patch["params"]["sessionKey"] == "voice-assistant"
-
-    @pytest.mark.asyncio
-    async def test_model_patch_reapplies_after_model_change(self) -> None:
-        client = OpenClawGatewayClient("localhost", 1, None, model="model-a")
-        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
-            side_effect=[
-                {"payload": {}},
-                {"payload": {"runId": "run-1"}},
-                {"payload": {}},
-                {"payload": {"runId": "run-2"}},
-            ]
-        )
-
-        first = asyncio.create_task(client.send_agent_request("hello-1"))
-        for _ in range(50):
-            if "run-1" in client._agent_runs:
-                break
-            await asyncio.sleep(0)
-        assert "run-1" in client._agent_runs
-        client._handle_agent_event(
-            {"payload": {"runId": "run-1", "status": "ok", "summary": "done-1"}}
-        )
-        assert await first == "done-1"
-
-        client.set_model("model-b")
-
-        second = asyncio.create_task(client.send_agent_request("hello-2"))
-        for _ in range(50):
-            if "run-2" in client._agent_runs:
-                break
-            await asyncio.sleep(0)
-        assert "run-2" in client._agent_runs
-        client._handle_agent_event(
-            {"payload": {"runId": "run-2", "status": "ok", "summary": "done-2"}}
-        )
-        assert await second == "done-2"
-
-        first_patch = client._gateway.send_request.call_args_list[0].kwargs  # type: ignore[attr-defined]
-        second_patch = client._gateway.send_request.call_args_list[2].kwargs  # type: ignore[attr-defined]
-        assert first_patch["params"]["updates"]["model"] == "model-a"
-        assert second_patch["params"]["updates"]["model"] == "model-b"
+        params = client._gateway.send_request.call_args.kwargs["params"]  # type: ignore[attr-defined]
+        assert params["model"] == "anthropic/claude-sonnet-4-5"
+        assert params["thinking"] == "medium"
+        assert "options" not in params
 
     @pytest.mark.asyncio
     async def test_status_error_raises(self) -> None:
@@ -498,6 +334,47 @@ class TestStreamAgentRequest:
 
         params = client._gateway.send_request.call_args.kwargs["params"]  # type: ignore[attr-defined]
         assert params["thinking"] == "medium"
+        assert "options" not in params
+
+    @pytest.mark.asyncio
+    async def test_stream_model_and_thinking_sent_as_root_params(self) -> None:
+        client = OpenClawGatewayClient(
+            "localhost",
+            1,
+            None,
+            model="anthropic/claude-opus-4-5",
+            thinking="low",
+        )
+        client._gateway.send_request = AsyncMock(  # type: ignore[attr-defined]
+            return_value={"payload": {"runId": "run-1"}}
+        )
+
+        chunks: list[str] = []
+
+        async def consume():
+            async for chunk in client.stream_agent_request("hello"):
+                chunks.append(chunk)
+
+        task = asyncio.create_task(consume())
+
+        for _ in range(50):
+            if "run-1" in client._agent_runs:
+                break
+            await asyncio.sleep(0)
+        assert "run-1" in client._agent_runs
+
+        client._handle_agent_event(
+            {"payload": {"runId": "run-1", "output": "done"}}
+        )
+        client._handle_agent_event(
+            {"payload": {"runId": "run-1", "status": "ok"}}
+        )
+        await task
+        assert chunks == ["done"]
+
+        params = client._gateway.send_request.call_args.kwargs["params"]  # type: ignore[attr-defined]
+        assert params["model"] == "anthropic/claude-opus-4-5"
+        assert params["thinking"] == "low"
         assert "options" not in params
 
     @pytest.mark.asyncio

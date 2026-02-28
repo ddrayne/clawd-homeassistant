@@ -129,7 +129,6 @@ class OpenClawGatewayClient:
         self._session_key = session_key
         self._model = model
         self._thinking = thinking
-        self._applied_model_override: tuple[str, str] | None = None
         self._agent_runs: dict[str, AgentRun] = {}
 
         # Register event handlers
@@ -185,7 +184,6 @@ class OpenClawGatewayClient:
     def set_session_key(self, session_key: str) -> None:
         """Set the active session key for new requests."""
         self._session_key = session_key
-        self._applied_model_override = None
 
     @property
     def model(self) -> str | None:
@@ -195,7 +193,6 @@ class OpenClawGatewayClient:
     def set_model(self, model: str | None) -> None:
         """Set the configured model override."""
         self._model = model
-        self._applied_model_override = None
 
     @property
     def thinking(self) -> str | None:
@@ -205,39 +202,6 @@ class OpenClawGatewayClient:
     def set_thinking(self, thinking: str | None) -> None:
         """Set the configured thinking mode override."""
         self._thinking = thinking
-
-    async def _apply_model_override_if_needed(self) -> None:
-        """Apply configured model as a session-level override (best effort)."""
-        if not self._model:
-            return
-
-        model_state = (self._session_key, self._model)
-        if self._applied_model_override == model_state:
-            return
-
-        try:
-            await self._gateway.send_request(
-                method="sessions.patch",
-                params={
-                    "sessionKey": self._session_key,
-                    "updates": {"model": self._model},
-                },
-                timeout=5.0,
-            )
-        except Exception as err:  # pylint: disable=broad-except
-            _LOGGER.warning(
-                "Failed to apply model override for session %s: %s",
-                self._session_key,
-                err,
-            )
-            return
-
-        self._applied_model_override = model_state
-        _LOGGER.debug(
-            "Applied model override for session %s: %s",
-            self._session_key,
-            self._model,
-        )
 
     async def send_agent_request(
         self, message: str, idempotency_key: str | None = None
@@ -265,18 +229,20 @@ class OpenClawGatewayClient:
 
         # Send agent request
         try:
-            await self._apply_model_override_if_needed()
-            params: dict[str, Any] = {
-                "message": message,
-                "sessionKey": self._session_key,
-                "idempotencyKey": idempotency_key,
-            }
+            options: dict[str, Any] = {}
+            if self._model:
+                options["model"] = self._model
             if self._thinking:
-                params["thinking"] = self._thinking
+                options["thinking"] = self._thinking
 
             response = await self._gateway.send_request(
                 method="agent",
-                params=params,
+                params={
+                    "message": message,
+                    "sessionKey": self._session_key,
+                    "idempotencyKey": idempotency_key,
+                    **options,
+                },
                 timeout=10.0,  # Initial ack should be quick
             )
 
@@ -364,18 +330,20 @@ class OpenClawGatewayClient:
         _LOGGER.debug("Streaming agent request with key: %s", idempotency_key)
 
         try:
-            await self._apply_model_override_if_needed()
-            params: dict[str, Any] = {
-                "message": message,
-                "sessionKey": self._session_key,
-                "idempotencyKey": idempotency_key,
-            }
+            options: dict[str, Any] = {}
+            if self._model:
+                options["model"] = self._model
             if self._thinking:
-                params["thinking"] = self._thinking
+                options["thinking"] = self._thinking
 
             response = await self._gateway.send_request(
                 method="agent",
-                params=params,
+                params={
+                    "message": message,
+                    "sessionKey": self._session_key,
+                    "idempotencyKey": idempotency_key,
+                    **options,
+                },
                 timeout=10.0,
             )
 

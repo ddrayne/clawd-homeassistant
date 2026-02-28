@@ -30,7 +30,7 @@ This integration lets you access your **entire OpenClaw agent** - with all its s
 - **Device Pairing**: One-time device approval with Ed25519 keypair, auto-approved for local connections
 - **Reliable Connection**: Keepalive pings, automatic reconnects, and graceful error handling
 - **Customizable Sessions**: Session selector in setup plus `openclaw.set_session` for fast switching
-- **Model & Thinking Overrides**: Session-level model override plus per-request thinking mode control
+- **Model & Thinking Overrides**: Per-request model and reasoning mode controls
 - **Streaming Responses**: Stream output when Home Assistant supports streaming conversation results
 - **Diagnostic Sensors**: Gateway uptime, connected clients, and health status sensors
 - **Fast Responses**: Typical response time of 5-10 seconds for most queries
