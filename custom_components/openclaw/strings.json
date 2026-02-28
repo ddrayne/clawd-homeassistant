@@ -21,6 +21,7 @@
         "description": "Choose a session and speech options",
         "data": {
           "session_key": "Session Key (default: main)",
+          "agent_id": "Agent (optional, leave blank for default)",
           "model": "Model override (optional)",
           "thinking": "Thinking mode override (optional)",
           "strip_emojis": "Strip emojis from TTS speech",
@@ -63,6 +64,7 @@
           "use_ssl": "Use SSL (wss://)",
           "timeout": "Agent Timeout (seconds)",
           "session_key": "Session Key (default: main)",
+          "agent_id": "Agent (optional, leave blank for default)",
           "model": "Model override (optional)",
           "thinking": "Thinking mode override (optional)",
           "strip_emojis": "Strip emojis from TTS speech",

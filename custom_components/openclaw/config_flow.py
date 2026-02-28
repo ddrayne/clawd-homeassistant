@@ -14,12 +14,14 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client, selector
 
 from .const import (
+    CONF_AGENT_ID,
     CONF_MODEL,
     CONF_SESSION_KEY,
     CONF_STRIP_EMOJIS,
     CONF_THINKING,
     CONF_TTS_MAX_CHARS,
     CONF_USE_SSL,
+    DEFAULT_AGENT_ID,
     DEFAULT_HOST,
     DEFAULT_MODEL,
     DEFAULT_PORT,
@@ -258,6 +260,9 @@ class OpenClawConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            agent_id = user_input.get(CONF_AGENT_ID)
+            if not agent_id:
+                user_input.pop(CONF_AGENT_ID, None)
             model = user_input.get(CONF_MODEL)
             if not model:
                 user_input.pop(CONF_MODEL, None)
@@ -272,6 +277,7 @@ class OpenClawConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         current_session = self._config_data.get(
             CONF_SESSION_KEY, DEFAULT_SESSION_KEY
         )
+        current_agent = self._config_data.get(CONF_AGENT_ID, DEFAULT_AGENT_ID) or ""
         current_model = self._config_data.get(CONF_MODEL, DEFAULT_MODEL) or ""
         current_thinking = (
             self._config_data.get(CONF_THINKING, DEFAULT_THINKING) or ""
@@ -283,6 +289,7 @@ class OpenClawConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         data_schema = vol.Schema(
             {
                 vol.Optional(CONF_SESSION_KEY, default=current_session): session_selector,
+                vol.Optional(CONF_AGENT_ID, default=current_agent): str,
                 vol.Optional(CONF_MODEL, default=current_model): str,
                 vol.Optional(CONF_THINKING, default=current_thinking): thinking_selector,
                 vol.Optional(
@@ -420,13 +427,14 @@ class OpenClawOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_USE_SSL: user_input.get(CONF_USE_SSL, DEFAULT_USE_SSL),
                     CONF_TIMEOUT: user_input.get(CONF_TIMEOUT, DEFAULT_TIMEOUT),
                     CONF_SESSION_KEY: user_input.get(
-                    CONF_SESSION_KEY, DEFAULT_SESSION_KEY
-                ),
-                CONF_MODEL: user_input.get(CONF_MODEL) or None,
-                CONF_THINKING: user_input.get(CONF_THINKING) or None,
-                CONF_STRIP_EMOJIS: user_input.get(
-                    CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS
-                ),
+                        CONF_SESSION_KEY, DEFAULT_SESSION_KEY
+                    ),
+                    CONF_AGENT_ID: user_input.get(CONF_AGENT_ID) or None,
+                    CONF_MODEL: user_input.get(CONF_MODEL) or None,
+                    CONF_THINKING: user_input.get(CONF_THINKING) or None,
+                    CONF_STRIP_EMOJIS: user_input.get(
+                        CONF_STRIP_EMOJIS, DEFAULT_STRIP_EMOJIS
+                    ),
                     CONF_TTS_MAX_CHARS: user_input.get(
                         CONF_TTS_MAX_CHARS, DEFAULT_TTS_MAX_CHARS
                     ),
@@ -443,6 +451,7 @@ class OpenClawOptionsFlowHandler(config_entries.OptionsFlow):
         current = {**self.config_entry.data, **self.config_entry.options}
         session_keys = await _async_fetch_sessions(self.hass, current)
         current_session = current.get(CONF_SESSION_KEY, DEFAULT_SESSION_KEY)
+        current_agent = current.get(CONF_AGENT_ID, DEFAULT_AGENT_ID) or ""
         current_model = current.get(CONF_MODEL, DEFAULT_MODEL) or ""
         current_thinking = current.get(CONF_THINKING, DEFAULT_THINKING) or ""
         session_selector = _build_session_selector(
@@ -470,6 +479,7 @@ class OpenClawOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_SESSION_KEY, default=current_session
                 ): session_selector,
+                vol.Optional(CONF_AGENT_ID, default=current_agent): str,
                 vol.Optional(CONF_MODEL, default=current_model): str,
                 vol.Optional(CONF_THINKING, default=current_thinking): thinking_selector,
                 vol.Optional(

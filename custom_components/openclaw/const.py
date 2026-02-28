@@ -12,6 +12,7 @@ DEFAULT_MODEL = None
 DEFAULT_THINKING = None
 DEFAULT_STRIP_EMOJIS = True  # Strip emojis from TTS by default
 DEFAULT_TTS_MAX_CHARS = 0  # 0 disables TTS trimming
+DEFAULT_AGENT_ID = None  # Use gateway default agent
 
 # Configuration keys
 CONF_HOST = "host"
@@ -20,6 +21,7 @@ CONF_TOKEN = "token"
 CONF_USE_SSL = "use_ssl"
 CONF_TIMEOUT = "timeout"
 CONF_SESSION_KEY = "session_key"
+CONF_AGENT_ID = "agent_id"
 CONF_MODEL = "model"
 CONF_THINKING = "thinking"
 CONF_STRIP_EMOJIS = "strip_emojis"

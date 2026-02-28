@@ -117,6 +117,7 @@ class OpenClawGatewayClient:
         use_ssl: bool = False,
         timeout: int = 30,
         session_key: str = "main",
+        agent_id: str | None = None,
         model: str | None = None,
         thinking: str | None = None,
         hass: Any | None = None,
@@ -127,6 +128,7 @@ class OpenClawGatewayClient:
         )
         self._timeout = timeout
         self._session_key = session_key
+        self._agent_id = agent_id
         self._model = model
         self._thinking = thinking
         self._agent_runs: dict[str, AgentRun] = {}
@@ -186,6 +188,15 @@ class OpenClawGatewayClient:
         self._session_key = session_key
 
     @property
+    def agent_id(self) -> str | None:
+        """Return the configured agent ID override."""
+        return self._agent_id
+
+    def set_agent_id(self, agent_id: str | None) -> None:
+        """Set the configured agent ID override."""
+        self._agent_id = agent_id
+
+    @property
     def model(self) -> str | None:
         """Return the configured model override."""
         return self._model
@@ -234,14 +245,21 @@ class OpenClawGatewayClient:
                 options["model"] = self._model
             if self._thinking:
                 options["thinking"] = self._thinking
+            session_key = (
+                f"agent:{self._agent_id}:{self._session_key}"
+                if self._agent_id
+                else self._session_key
+            )
+            params: dict[str, Any] = {
+                "message": message,
+                "sessionKey": session_key,
+                "idempotencyKey": idempotency_key,
+            }
+            if options:
+                params["options"] = options
             response = await self._gateway.send_request(
                 method="agent",
-                params={
-                    "message": message,
-                    "sessionKey": self._session_key,
-                    "idempotencyKey": idempotency_key,
-                    **({"options": options} if options else {}),
-                },
+                params=params,
                 timeout=10.0,  # Initial ack should be quick
             )
 
@@ -334,14 +352,21 @@ class OpenClawGatewayClient:
                 options["model"] = self._model
             if self._thinking:
                 options["thinking"] = self._thinking
+            session_key = (
+                f"agent:{self._agent_id}:{self._session_key}"
+                if self._agent_id
+                else self._session_key
+            )
+            params: dict[str, Any] = {
+                "message": message,
+                "sessionKey": session_key,
+                "idempotencyKey": idempotency_key,
+            }
+            if options:
+                params["options"] = options
             response = await self._gateway.send_request(
                 method="agent",
-                params={
-                    "message": message,
-                    "sessionKey": self._session_key,
-                    "idempotencyKey": idempotency_key,
-                    **({"options": options} if options else {}),
-                },
+                params=params,
                 timeout=10.0,
             )
 
